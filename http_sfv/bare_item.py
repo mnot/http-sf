@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Tuple
+from typing import Tuple, cast
 
 from http_sfv.boolean import parse_boolean, ser_boolean
 from http_sfv.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
@@ -29,7 +29,7 @@ def parse_bare_item(data: bytes) -> Tuple[int, BareItemType]:
     if not data:
         raise ValueError("Empty item")
     try:
-        return _parse_map[data[0]](data)  # type: ignore
+        return cast(Tuple[int, BareItemType], _parse_map[data[0]](data))
     except KeyError as why:
         raise ValueError(
             f"Item starting with '{data[0:1].decode('ascii')}' can't be identified"

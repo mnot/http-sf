@@ -1,9 +1,9 @@
-from typing import Tuple
+from typing import Tuple, cast
 
 from http_sfv.item import ser_item
 from http_sfv.innerlist import parse_item_or_inner_list
 from http_sfv.parameters import parse_params, ser_params
-from http_sfv.types import DictionaryType
+from http_sfv.types import DictionaryType, ItemType
 from http_sfv.util import discard_http_ows, ser_key, parse_key
 
 
@@ -50,7 +50,7 @@ def ser_dictionary(dictionary: DictionaryType) -> str:
             f"{ser_key(m)}"
             f"""{ser_params(n[1]) if
                 (isinstance(n, tuple) and n[0] is True)
-                else f'={ser_item(n)}'}"""  # type: ignore
+                else f'={ser_item(cast(ItemType, n))}'}"""
             for m, n in dictionary.items()
         ]
     )
