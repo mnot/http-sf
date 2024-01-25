@@ -1,7 +1,7 @@
 
 # HTTP Structured Fields in Python
 
-[![Actions Status](https://github.com/mnot/http-sf/workflows/CI/badge.svg)](https://github.com/mnot/http-sf/actions)
+[![Actions Status](https://github.com/mnot/http-sf/workflows/test/badge.svg)](https://github.com/mnot/http-sf/actions)
 
 This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [HTTP Structured Fields](https://httpwg.org/http-extensions/draft-ietf-httpbis-header-structure.html).
 
