@@ -44,7 +44,7 @@ def parse(
     if name is not None:
         tltype = retrofit.get(name.lower(), None)
     cursor = discard_ows(value)
-    if tltype == "dictionary":
+    if tltype in ["dict", "dictionary"]:
         bytes_consumed, structure = parse_dictionary(value[cursor:])
     elif tltype == "list":
         bytes_consumed, structure = parse_list(value[cursor:])
