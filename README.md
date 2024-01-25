@@ -28,7 +28,7 @@ Because the library needs to know which kind of field it is, you need to hint th
 1. Using a `tltype` parameter, whose value should be one of 'dictionary', 'list', or 'item'.
 2. Using a `name` parameter to indicate a field name that has a registered type, per [the retrofit draft](https://httpwg.org/http-extensions/draft-ietf-httpbis-retrofit.html).
 
-Note that if you use `name`, a `KeyError` will be raised if the type associated with the name isn't known.
+Note that if you use `name`, a `KeyError` will be raised if the type associated with the name isn't known, unless you also pass a `tltype` as a fallback.
 
 ### Types
 

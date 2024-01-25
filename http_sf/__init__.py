@@ -42,7 +42,7 @@ def parse(
 ) -> StructuredType:
     structure: StructuredType
     if name is not None:
-        tltype = retrofit.get(name.lower(), None)
+        tltype = retrofit.get(name.lower(), tltype)
     cursor = discard_ows(value)
     if tltype in ["dict", "dictionary"]:
         bytes_consumed, structure = parse_dictionary(value[cursor:])
