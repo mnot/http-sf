@@ -3,11 +3,9 @@
 
 [![Actions Status](https://github.com/mnot/http-sf/workflows/test/badge.svg)](https://github.com/mnot/http-sf/actions)
 
-This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [HTTP Structured Fields](https://httpwg.org/http-extensions/draft-ietf-httpbis-header-structure.html).
+This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [RFC8941](https://www.rfc-editor.org/rfc/rfc8941.html).
 
-The library's initial purpose is to prove the algorithms in the specification; as a result, it is not at all optimised. It tracks the specification closely, but since it is not yet an RFC, may change at any time.
-
-_Currently, this implements [draft-ietf-httpbis-sfbis-03](https://datatracker.ietf.org/doc/draft-ietf-httpbis-sfbis/)._
+This library also implements Display Strings and Dates, as specified in  [draft-ietf-httpbis-sfbis-05](https://datatracker.ietf.org/doc/draft-ietf-httpbis-sfbis/)._
 
 ## Python API
 
