@@ -43,7 +43,7 @@ where = ["."]
 include-package-data = true
 
 [tool.setuptools.package-data]
-http_sfv = ["py.typed"]
+http_sf = ["py.typed"]
 
 [tool.mypy]
 follow_imports = "normal"
