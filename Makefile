@@ -1,4 +1,4 @@
-PROJECT=http_sfv
+PROJECT=http_sf
 BLAB=test/blab
 TESTS=test/tests/*.json
 
@@ -32,7 +32,7 @@ $(BLAB): $(BLAB).c
 fuzz-%: venv $(BLAB)
 	while [ true ];\
 	do\
-		$(BLAB) -l test -e "sf.sf-$*" -f 200 | PYTHONPATH=$(VENV) $(VENV)/python -m http_sfv --$* --stdin || exit 1;\
+		$(BLAB) -l test -e "sf.sf-$*" -f 200 | PYTHONPATH=$(VENV) $(VENV)/python -m $(PROJECT) --$* --stdin || exit 1;\
 	done
 
 .PHONY: clean

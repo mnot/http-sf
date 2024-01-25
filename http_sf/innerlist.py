@@ -1,14 +1,14 @@
 from typing import Tuple, List, cast, Union
 
-from http_sfv.item import parse_item, ser_item
-from http_sfv.parameters import parse_params, ser_params
-from http_sfv.types import (
+from http_sf.item import parse_item, ser_item
+from http_sf.parameters import parse_params, ser_params
+from http_sf.types import (
     InnerListType,
     ItemType,
     ParamsType,
     ItemOrInnerListType,
 )
-from http_sfv.util import discard_ows
+from http_sf.util import discard_ows
 
 PAREN_OPEN = ord(b"(")
 PAREN_CLOSE = ord(b")")

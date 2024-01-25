@@ -1,8 +1,8 @@
 from typing import Tuple
 
-from http_sfv.bare_item import parse_bare_item, ser_bare_item
-from http_sfv.types import BareItemType, ItemType, ParamsType
-from http_sfv.parameters import parse_params, ser_params
+from http_sf.bare_item import parse_bare_item, ser_bare_item
+from http_sf.types import BareItemType, ItemType, ParamsType
+from http_sf.parameters import parse_params, ser_params
 
 PAREN_OPEN = ord(b"(")
 SEMICOLON = ord(b";")

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Tuple, Union, cast
 
-from http_sfv.integer import parse_number
+from http_sf.integer import parse_number
 
 INT_DIGITS = 12
 FRAC_DIGITS = 3

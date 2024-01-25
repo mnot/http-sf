@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/http_sfv
+      url: https://pypi.org/p/http-sf
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 

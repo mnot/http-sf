@@ -1,7 +1,7 @@
 from string import ascii_letters, digits
 from typing import Tuple
 
-from http_sfv.types import Token
+from http_sf.types import Token
 
 TOKEN_START_CHARS = set((ascii_letters + "*").encode("ascii"))
 TOKEN_CHARS = set((ascii_letters + digits + ":/!#$%&'*+-.^_`|~").encode("ascii"))

@@ -1,7 +1,7 @@
 
-# HTTP Structured Field Values in Python
+# HTTP Structured Fields in Python
 
-[![Actions Status](https://github.com/mnot/http_sfv/workflows/CI/badge.svg)](https://github.com/mnot/http_sfv/actions)
+[![Actions Status](https://github.com/mnot/http-sf/workflows/CI/badge.svg)](https://github.com/mnot/http-sf/actions)
 
 This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [HTTP Structured Fields](https://httpwg.org/http-extensions/draft-ietf-httpbis-header-structure.html).
 
@@ -16,7 +16,7 @@ _Currently, this implements [draft-ietf-httpbis-sfbis-03](https://datatracker.ie
 Textual HTTP headers can be parsed by calling `parse`; the return value is a data structure that represents the field value.
 
 ~~~ python
->>> from http_sfv import parse, ser
+>>> from http_sf import parse, ser
 >>> parse(b"foo; a=1, bar; b=2", tltype="dictionary")
 {'foo': (True, {'a': 1}), 'bar': (True, {'b': 2})}
 ~~~
@@ -41,11 +41,11 @@ Bare types are represented using the following Python types:
 * Integers: `int`
 * Decimals: `float`
 * Strings: `str`
-* Tokens: `http_sfv.Token` (a `UserString`)
+* Tokens: `http_sf.Token` (a `UserString`)
 * Byte Sequences: `bytes`
 * Booleans: `bool`
 * Dates: `datetime.datetime`
-* Display Strings: `http_sfv.DisplayString` (a `UserString`)
+* Display Strings: `http_sf.DisplayString` (a `UserString`)
 
 Inner Lists are represented as lists as well.
 
@@ -93,7 +93,7 @@ Note that `ser` produces a string, not a bytes-like object.
 You can validate and examine the data model of a field value by calling the library on the command line, using `-d`, `-l` and `-i` to denote dictionaries, lists or items respectively; e.g.,
 
 ~~~ bash
-> python3 -m http_sfv -i "foo;bar=baz"
+> python3 -m http_sf -i "foo;bar=baz"
 [
     {
         "__type": "token",
@@ -111,14 +111,14 @@ You can validate and examine the data model of a field value by calling the libr
 or:
 
 ~~~ bash
-> python3 -m http_sfv -i "foo;&bar=baz"
+> python3 -m http_sf -i "foo;&bar=baz"
 FAIL: Key does not begin with lcalpha or * at: &bar=baz
 ~~~
 
 Alternatively, you can pass the field name with the `-n` option, provided that it is a compatible retrofit field:
 
 ~~~ bash
-> python3 -m http_sfv -n "Cache-Control" "max-age=40, must-revalidate"
+> python3 -m http_sf -n "Cache-Control" "max-age=40, must-revalidate"
 {
     "max-age": [
         40,

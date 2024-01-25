@@ -8,8 +8,8 @@ from pathlib import Path
 import sys
 from typing import Any, List, Union
 
-from http_sfv import parse, ser, Token, DisplayString
-from http_sfv.util import to_json
+from http_sf import parse, ser, Token, DisplayString
+from http_sf.util import to_json
 
 FAIL = "\033[91m"
 WARN = "\033[93m"

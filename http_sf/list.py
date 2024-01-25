@@ -1,8 +1,8 @@
 from typing import Tuple
 
-from http_sfv.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
-from http_sfv.types import ListType
-from http_sfv.util import discard_http_ows
+from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
+from http_sf.types import ListType
+from http_sf.util import discard_http_ows
 
 
 COMMA = ord(b",")

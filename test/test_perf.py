@@ -6,7 +6,7 @@ import time
 from pstats import Stats
 import timeit
 
-import http_sfv as sfv
+import http_sf as sf
 
 locale.setlocale(locale.LC_ALL, "")
 
@@ -39,7 +39,7 @@ perf_structures = [
 def time_parse(structure, field_type):
     return int(
         timeit.timeit(
-        f"sfv.parse(b'{structure}', tltype='{field_type}')",
+        f"sf.parse(b'{structure}', tltype='{field_type}')",
         setup=f"import time; time.sleep({wait})",
         globals=globals(),
         number=i

@@ -1,10 +1,10 @@
 from typing import Tuple, cast
 
-from http_sfv.item import ser_item
-from http_sfv.innerlist import parse_item_or_inner_list
-from http_sfv.parameters import parse_params, ser_params
-from http_sfv.types import DictionaryType, ItemType
-from http_sfv.util import discard_http_ows, ser_key, parse_key
+from http_sf.item import ser_item
+from http_sf.innerlist import parse_item_or_inner_list
+from http_sf.parameters import parse_params, ser_params
+from http_sf.types import DictionaryType, ItemType
+from http_sf.util import discard_http_ows, ser_key, parse_key
 
 
 EQUALS = ord(b"=")

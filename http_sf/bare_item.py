@@ -2,15 +2,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, cast
 
-from http_sfv.boolean import parse_boolean, ser_boolean
-from http_sfv.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
-from http_sfv.decimal import ser_decimal
-from http_sfv.integer import parse_number, ser_integer, NUMBER_START_CHARS
-from http_sfv.string import parse_string, ser_string, DQUOTE
-from http_sfv.token import parse_token, ser_token, TOKEN_START_CHARS
-from http_sfv.date import parse_date, ser_date
-from http_sfv.display_string import parse_display_string, ser_display_string
-from http_sfv.types import BareItemType, Token, DisplayString
+from http_sf.boolean import parse_boolean, ser_boolean
+from http_sf.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
+from http_sf.decimal import ser_decimal
+from http_sf.integer import parse_number, ser_integer, NUMBER_START_CHARS
+from http_sf.string import parse_string, ser_string, DQUOTE
+from http_sf.token import parse_token, ser_token, TOKEN_START_CHARS
+from http_sf.date import parse_date, ser_date
+from http_sf.display_string import parse_display_string, ser_display_string
+from http_sf.types import BareItemType, Token, DisplayString
 
 _parse_map = {
     DQUOTE: parse_string,

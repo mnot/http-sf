@@ -25,16 +25,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-__version__ = "0.9.8"
+__version__ = "1.0.0"
 
 from typing import Tuple, List, Dict, Optional
 
-from http_sfv.dictionary import parse_dictionary, ser_dictionary
-from http_sfv.item import parse_item, ser_item
-from http_sfv.list import parse_list, ser_list
-from http_sfv.retrofit import retrofit
-from http_sfv.types import StructuredType, Token, DisplayString
-from http_sfv.util import discard_ows
+from http_sf.dictionary import parse_dictionary, ser_dictionary
+from http_sf.item import parse_item, ser_item
+from http_sf.list import parse_list, ser_list
+from http_sf.retrofit import retrofit
+from http_sf.types import StructuredType, Token, DisplayString
+from http_sf.util import discard_ows
 
 
 def parse(

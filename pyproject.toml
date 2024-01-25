@@ -1,10 +1,10 @@
 [project]
-name = "http_sfv"
+name = "http-sf"
 dynamic = ["version"]
 authors = [
     {name="Mark Nottingham", email="mnot@mnot.net"}
 ]
-description = "Parse and serialise HTTP Structured Field Values"
+description = "Parse and serialise HTTP Structured Fields"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {file = "LICENSE.md"}
@@ -21,7 +21,7 @@ dependencies = [
 dev = ["mypy", "black", "pylint", "pytest", "pytest-md", "validate-pyproject", "build"]
 
 [project.urls]
-homepage = "https://github.com/mnot/http_sfv"
+homepage = "https://github.com/mnot/http-sf"
 
 [project.scripts]
 
@@ -34,7 +34,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = {attr = "http_sfv.__version__"}
+version = {attr = "http_sf.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
