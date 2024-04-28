@@ -12,7 +12,7 @@ def parse_list(data: bytes) -> Tuple[int, ListType]:
     bytes_consumed = 0
     _list = []
     data_len = len(data)
-    while True:
+    while bytes_consumed < data_len:
         offset, member = parse_item_or_inner_list(data[bytes_consumed:])
         bytes_consumed += offset
         _list.append(member)
@@ -25,6 +25,7 @@ def parse_list(data: bytes) -> Tuple[int, ListType]:
         bytes_consumed += discard_http_ows(data[bytes_consumed:])
         if bytes_consumed == data_len:
             raise ValueError("Trailing comma at end of list")
+    return bytes_consumed, _list
 
 
 def ser_list(_list: ListType) -> str:
