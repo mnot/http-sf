@@ -59,10 +59,20 @@ def ser_key(key: str) -> str:
 
 
 def to_json(structure: StructuredType, **args: Any) -> str:
-    return json.dumps(structure, default=json_translate, **args)
+    return json.dumps(structure, default=json_dump, **args)
 
 
-def json_translate(inobj: Any) -> Union[Any, dict]:
+def from_json(instr: str) -> StructuredType:
+    raw_suite = json.loads(instr, parse_float=Decimal, object_hook=json_load)
+    suite = []
+    for test in raw_suite:
+        if "expected" in test:
+            test["expected"] = adjust_field_json(test["expected"], test["header_type"])
+        suite.append(test)
+    return suite
+
+
+def json_dump(inobj: Any) -> Union[Any, dict]:
     if isinstance(inobj, Token):
         return {"__type": "token", "value": str(inobj)}
     if isinstance(inobj, bytes):
@@ -74,3 +84,38 @@ def json_translate(inobj: Any) -> Union[Any, dict]:
     if isinstance(inobj, Decimal):
         return float(inobj)
     raise ValueError(f"Unknown object type - {inobj}")
+
+
+def json_load(inobj: dict) -> Any:
+    objtype = inobj.get("__type", None)
+    if not objtype:
+        return inobj
+    if objtype == "token":
+        return Token(inobj["value"])
+    if objtype == "binary":
+        return base64.b32decode(inobj["value"])
+    if objtype == "date":
+        return datetime.fromtimestamp(inobj["value"])
+    if objtype == "displaystring":
+        return DisplayString(inobj["value"])
+    raise ValueError(f"Unknown object type - {inobj}")
+
+
+def adjust_field_json(field: Any, header_type: str) -> Any:
+    if header_type == "dictionary":
+        return {k: adjust(v) for k, v in field}
+    if header_type == "list":
+        return [adjust(i) for i in field]
+    if header_type == "item":
+        return adjust(field)
+    raise ValueError(f"Unknown header_type: {header_type}")
+
+
+def adjust(thing: Any) -> Any:
+    if isinstance(thing, list) and len(thing) == 2:
+        thing = (thing[0], thing[1])
+        if isinstance(thing[0], list):
+            thing = ([adjust(i) for i in thing[0]], thing[1])
+        if isinstance(thing[1], list):
+            thing = (thing[0], dict([adjust((k, v)) for k, v in thing[1]]))
+    return thing

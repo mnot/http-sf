@@ -9,7 +9,7 @@ import sys
 from typing import Any, List, Union
 
 from http_sf import parse, ser, Token, DisplayString
-from http_sf.util import to_json
+from http_sf.util import to_json, from_json
 
 FAIL = "\033[91m"
 WARN = "\033[93m"
@@ -21,9 +21,8 @@ def load_tests(files=None) -> List:
     if not files:
         files = Path("test/tests").glob("*.json")
     for filename in files:
-        fh = open(filename)
-        suite_json = json.load(fh, parse_float=decimal.Decimal)
-        suites.append((filename, suite_json))
+        suite = from_json(open(filename).read())
+        suites.append((filename, suite))
     return suites
 
 
@@ -48,7 +47,7 @@ def run_suite(suite_name: str, suite: List) -> None:
             if parse_fail_reason:
                 print(f"    -   reason: {parse_fail_reason}")
 
-        if False and not test.get("must_fail", False):
+        if not test.get("must_fail", False):
             suite_tests += 1
             ser_success, serialised, ser_expected, ser_fail_reason = test_serialise(
                 test
@@ -85,29 +84,9 @@ def test_parse(test: dict) -> Union[bool, Any, str]:
     if test.get("must_fail", False):
         test_success = not parse_success
     else:
-        test_success = test["expected"] == norm(structure)
-    return test_success, norm(structure), parse_fail_reason
+        test_success = test["expected"] == structure
+    return test_success, structure, parse_fail_reason
 
-def norm(structure: Any) -> Any:
-    if isinstance(structure, dict):
-        structure = [[k, adjust(v)] for k,v in structure.items()]
-    elif isinstance(structure, list):
-        structure = [adjust(i) for i in structure]
-    else:
-        structure = adjust(structure)
-    return json.loads(to_json(structure), parse_float=decimal.Decimal)
-
-def adjust(thing: Any) -> Any:
-    if isinstance(thing, tuple) and len(thing) == 2:
-        if isinstance(thing[0], decimal.Decimal):
-            thing = [float(thing[0]), thing[1]]
-        if isinstance(thing[1], decimal.Decimal):
-            thing = [thing[0], float(thing[1])]
-        if isinstance(thing[0], list):
-            thing = [[adjust(i) for i in thing[0]], thing[1]]
-        if isinstance(thing[1], dict):
-            thing = [thing[0], [adjust((k,v)) for k,v in thing[1].items()]]
-    return thing
 
 def test_serialise(test: dict) -> Union[bool, str, str, str]:
     expected = test.get("canonical", test["raw"])
