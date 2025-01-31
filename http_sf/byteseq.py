@@ -18,7 +18,7 @@ def parse_byteseq(data: bytes) -> Tuple[int, bytes]:
     if not all(c in B64CONTENT for c in b64_content):
         raise ValueError("Binary Sequence contained disallowed character")
     try:
-        binary_content = base64.standard_b64decode(b64_content)
+        binary_content = base64.b64decode(b64_content, validate=True)
     except binascii.Error as why:
         raise ValueError("Binary Sequence failed to decode") from why
     return bytes_consumed, binary_content
