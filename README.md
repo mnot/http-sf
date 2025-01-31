@@ -3,9 +3,7 @@
 
 [![Test Status](https://github.com/mnot/http-sf/actions/workflows/test.yml/badge.svg)](https://github.com/mnot/http-sf/actions)
 
-This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [RFC8941](https://www.rfc-editor.org/rfc/rfc8941.html).
-
-This library also implements Display Strings and Dates, as specified in  [draft-ietf-httpbis-sfbis-05](https://datatracker.ietf.org/doc/draft-ietf-httpbis-sfbis/).
+This is a [Python 3](https://python.org/) library implementing parsing and serialisation of [RFC 9651](https://www.rfc-editor.org/rfc/rfc9651.html).
 
 ## Python API
 
