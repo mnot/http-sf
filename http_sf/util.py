@@ -51,6 +51,8 @@ def parse_key(data: bytes) -> Tuple[int, str]:
 
 
 def ser_key(key: str) -> str:
+    if len(key) == 0:
+        raise ValueError("Zero length key")
     if not all(ord(char) in KEY_CHARS for char in key):
         raise ValueError("Key contains disallowed characters")
     if ord(key[0]) not in KEY_START_CHARS:
