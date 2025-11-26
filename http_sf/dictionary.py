@@ -31,7 +31,7 @@ def parse_dictionary(data: bytes) -> Tuple[int, DictionaryType]:
             bytes_consumed += params_consumed
             member = (True, params)
         if config.on_duplicate_key and this_key in dictionary:
-            config.on_duplicate_key(this_key)  # pylint: disable=not-callable
+            config.on_duplicate_key(this_key, "dictionary")  # pylint: disable=not-callable
         dictionary[this_key] = member
         bytes_consumed += discard_http_ows(data[bytes_consumed:])
         if bytes_consumed == data_len:

@@ -32,7 +32,7 @@ def parse_params(data: bytes) -> Tuple[int, ParamsType]:
         except IndexError:
             pass
         if config.on_duplicate_key and param_name in params:
-            config.on_duplicate_key(param_name)  # pylint: disable=not-callable
+            config.on_duplicate_key(param_name, "parameter")  # pylint: disable=not-callable
         params[param_name] = param_value
     return bytes_consumed, params
 
