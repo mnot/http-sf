@@ -1,4 +1,4 @@
-from typing import Tuple, List, cast, Union
+from typing import Tuple, List, cast, Union, Optional
 
 from http_sf.item import parse_item, ser_item
 from http_sf.parameters import parse_params, ser_params
@@ -7,6 +7,7 @@ from http_sf.types import (
     ItemType,
     ParamsType,
     ItemOrInnerListType,
+    OnDuplicateKeyType,
 )
 from http_sf.util import discard_ows
 
@@ -15,7 +16,9 @@ PAREN_CLOSE = ord(b")")
 INNERLIST_DELIMS = set(b" )")
 
 
-def parse_innerlist(data: bytes) -> Tuple[int, InnerListType]:
+def parse_innerlist(
+    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[int, InnerListType]:
     bytes_consumed = 1  # consume the "("
     inner_list: List[ItemType] = []
     params: ParamsType = {}
@@ -23,10 +26,10 @@ def parse_innerlist(data: bytes) -> Tuple[int, InnerListType]:
         bytes_consumed += discard_ows(data[bytes_consumed:])
         if data[bytes_consumed] == PAREN_CLOSE:
             bytes_consumed += 1
-            params_consumed, params = parse_params(data[bytes_consumed:])
+            params_consumed, params = parse_params(data[bytes_consumed:], on_duplicate_key)
             bytes_consumed += params_consumed
             return bytes_consumed, (inner_list, params)
-        item_consumed, item = parse_item(data[bytes_consumed:])
+        item_consumed, item = parse_item(data[bytes_consumed:], on_duplicate_key)
         bytes_consumed += item_consumed
         inner_list.append(item)
         try:
@@ -44,13 +47,15 @@ def ser_innerlist(inner_list: InnerListType) -> str:
     )
 
 
-def parse_item_or_inner_list(data: bytes) -> Tuple[int, Union[ItemType, InnerListType]]:
+def parse_item_or_inner_list(
+    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[int, Union[ItemType, InnerListType]]:
     try:
         if data[0] == PAREN_OPEN:
-            return parse_innerlist(data)
+            return parse_innerlist(data, on_duplicate_key)
     except IndexError:
         pass
-    return parse_item(data)
+    return parse_item(data, on_duplicate_key)
 
 
 def ser_item_or_inner_list(thing: ItemOrInnerListType) -> str:

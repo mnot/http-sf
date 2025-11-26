@@ -1,8 +1,7 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 from http_sf.bare_item import parse_bare_item, ser_bare_item
-from http_sf.types import BareItemType, ParamsType
-from http_sf import config
+from http_sf.types import BareItemType, ParamsType, OnDuplicateKeyType
 from http_sf.util import discard_ows, parse_key, ser_key
 
 PAREN_OPEN = ord(b"(")
@@ -10,7 +9,9 @@ SEMICOLON = ord(b";")
 EQUALS = ord(b"=")
 
 
-def parse_params(data: bytes) -> Tuple[int, ParamsType]:
+def parse_params(
+    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[int, ParamsType]:
     bytes_consumed = 0
     params = {}
     while True:
@@ -31,8 +32,8 @@ def parse_params(data: bytes) -> Tuple[int, ParamsType]:
                 bytes_consumed += offset
         except IndexError:
             pass
-        if config.on_duplicate_key and param_name in params:
-            config.on_duplicate_key(param_name, "parameter")  # pylint: disable=not-callable
+        if on_duplicate_key and param_name in params:
+            on_duplicate_key(param_name, "parameter")
         params[param_name] = param_value
     return bytes_consumed, params
 

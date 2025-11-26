@@ -33,13 +33,12 @@ Note that if you use `name`, a `KeyError` will be raised if the type associated 
 By default, duplicate keys in Dictionaries and Parameters are overwritten by the last value, as per the specification. If you wish to detect when this happens, you can set a callback:
 
 ~~~ python
->>> from http_sf import parse, config
->>> def complain(key):
-...     print(f"Duplicate key: {key}")
+>>> from http_sf import parse
+>>> def complain(key, context):
+...     print(f"Duplicate key: {key} in {context}")
 ...
->>> config.on_duplicate_key = complain
->>> parse(b"a=1, a=2", tltype="dictionary")
-Duplicate key: a
+>>> parse(b"a=1, a=2", tltype="dictionary", on_duplicate_key=complain)
+Duplicate key: a in dictionary
 {'a': (2, {})}
 ~~~
 

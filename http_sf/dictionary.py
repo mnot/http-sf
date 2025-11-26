@@ -1,9 +1,8 @@
-from typing import Tuple, cast
+from typing import Tuple, cast, Optional
 
 from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
 from http_sf.parameters import parse_params, ser_params
-from http_sf.types import DictionaryType, ItemType
-from http_sf import config
+from http_sf.types import DictionaryType, ItemType, OnDuplicateKeyType
 from http_sf.util import discard_http_ows, ser_key, parse_key
 
 
@@ -11,7 +10,9 @@ EQUALS = ord(b"=")
 COMMA = ord(b",")
 
 
-def parse_dictionary(data: bytes) -> Tuple[int, DictionaryType]:
+def parse_dictionary(
+    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[int, DictionaryType]:
     bytes_consumed = 0
     dictionary = {}
     data_len = len(data)
@@ -24,14 +25,14 @@ def parse_dictionary(data: bytes) -> Tuple[int, DictionaryType]:
             is_equals = False
         if is_equals:
             bytes_consumed += 1  # consume the "="
-            offset, member = parse_item_or_inner_list(data[bytes_consumed:])
+            offset, member = parse_item_or_inner_list(data[bytes_consumed:], on_duplicate_key)
             bytes_consumed += offset
         else:
-            params_consumed, params = parse_params(data[bytes_consumed:])
+            params_consumed, params = parse_params(data[bytes_consumed:], on_duplicate_key)
             bytes_consumed += params_consumed
             member = (True, params)
-        if config.on_duplicate_key and this_key in dictionary:
-            config.on_duplicate_key(this_key, "dictionary")  # pylint: disable=not-callable
+        if on_duplicate_key and this_key in dictionary:
+            on_duplicate_key(this_key, "dictionary")
         dictionary[this_key] = member
         bytes_consumed += discard_http_ows(data[bytes_consumed:])
         if bytes_consumed == data_len:

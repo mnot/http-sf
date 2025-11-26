@@ -1,19 +1,21 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
-from http_sf.types import ListType
+from http_sf.types import ListType, OnDuplicateKeyType
 from http_sf.util import discard_http_ows
 
 
 COMMA = ord(b",")
 
 
-def parse_list(data: bytes) -> Tuple[int, ListType]:
+def parse_list(
+    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[int, ListType]:
     bytes_consumed = 0
     _list = []
     data_len = len(data)
     while bytes_consumed < data_len:
-        offset, member = parse_item_or_inner_list(data[bytes_consumed:])
+        offset, member = parse_item_or_inner_list(data[bytes_consumed:], on_duplicate_key)
         bytes_consumed += offset
         _list.append(member)
         bytes_consumed += discard_http_ows(data[bytes_consumed:])

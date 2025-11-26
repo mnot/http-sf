@@ -27,30 +27,32 @@ THE SOFTWARE.
 
 __version__ = "1.0.6"
 
-from typing import Tuple, List, Dict, Optional
+from typing import Tuple, List, Dict, Optional, Callable
 
 from http_sf.dictionary import parse_dictionary, ser_dictionary
 from http_sf.item import parse_item, ser_item
 from http_sf.list import parse_list, ser_list
 from http_sf.retrofit import retrofit
-from http_sf.types import StructuredType, Token, DisplayString
+from http_sf.types import StructuredType, Token, DisplayString, OnDuplicateKeyType
 from http_sf.util import discard_ows
-from http_sf import config
 
 
 def parse(
-    value: bytes, name: Optional[str] = None, tltype: Optional[str] = None
+    value: bytes,
+    name: Optional[str] = None,
+    tltype: Optional[str] = None,
+    on_duplicate_key: Optional[OnDuplicateKeyType] = None,
 ) -> StructuredType:
     structure: StructuredType
     if name is not None:
         tltype = retrofit.get(name.lower(), tltype)
     cursor = discard_ows(value)
     if tltype in ["dict", "dictionary"]:
-        bytes_consumed, structure = parse_dictionary(value[cursor:])
+        bytes_consumed, structure = parse_dictionary(value[cursor:], on_duplicate_key)
     elif tltype == "list":
-        bytes_consumed, structure = parse_list(value[cursor:])
+        bytes_consumed, structure = parse_list(value[cursor:], on_duplicate_key)
     elif tltype == "item":
-        bytes_consumed, structure = parse_item(value[cursor:])
+        bytes_consumed, structure = parse_item(value[cursor:], on_duplicate_key)
     else:
         raise KeyError("unrecognised top-level type")
     cursor += bytes_consumed
