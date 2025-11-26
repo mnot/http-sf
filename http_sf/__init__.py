@@ -35,6 +35,7 @@ from http_sf.list import parse_list, ser_list
 from http_sf.retrofit import retrofit
 from http_sf.types import StructuredType, Token, DisplayString
 from http_sf.util import discard_ows
+from http_sf import config
 
 
 def parse(

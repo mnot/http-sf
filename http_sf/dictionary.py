@@ -3,6 +3,7 @@ from typing import Tuple, cast
 from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
 from http_sf.parameters import parse_params, ser_params
 from http_sf.types import DictionaryType, ItemType
+from http_sf import config
 from http_sf.util import discard_http_ows, ser_key, parse_key
 
 
@@ -29,6 +30,8 @@ def parse_dictionary(data: bytes) -> Tuple[int, DictionaryType]:
             params_consumed, params = parse_params(data[bytes_consumed:])
             bytes_consumed += params_consumed
             member = (True, params)
+        if config.on_duplicate_key and this_key in dictionary:
+            config.on_duplicate_key(this_key)  # pylint: disable=not-callable
         dictionary[this_key] = member
         bytes_consumed += discard_http_ows(data[bytes_consumed:])
         if bytes_consumed == data_len:

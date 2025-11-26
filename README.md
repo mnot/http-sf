@@ -28,6 +28,21 @@ Because the library needs to know which kind of field it is, you need to hint th
 
 Note that if you use `name`, a `KeyError` will be raised if the type associated with the name isn't known, unless you also pass a `tltype` as a fallback.
 
+#### Duplicate Keys
+
+By default, duplicate keys in Dictionaries and Parameters are overwritten by the last value, as per the specification. If you wish to detect when this happens, you can set a callback:
+
+~~~ python
+>>> from http_sf import parse, config
+>>> def complain(key):
+...     print(f"Duplicate key: {key}")
+...
+>>> config.on_duplicate_key = complain
+>>> parse(b"a=1, a=2", tltype="dictionary")
+Duplicate key: a
+{'a': (2, {})}
+~~~
+
 ### Types
 
 In the returned data, Dictionaries are represented as Python dictionaries; Lists are represented as Python lists, and Items are the bare type.
