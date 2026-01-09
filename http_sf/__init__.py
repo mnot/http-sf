@@ -64,7 +64,7 @@ def parse(
         discard_ows(state)
         if state.has_data():
             raise StructuredFieldError(
-                "Trailing characters after value.",
+                "Trailing characters after value (missing comma?)",
                 position=state.cursor,
                 offending_char=state.data[state.cursor],
             )
