@@ -38,13 +38,19 @@ def parse_bare_item(state: ParserState) -> BareItemType:
             "Empty item", position=state.cursor, offending_char=char
         )
     try:
-        return cast(BareItemType, _parse_map[state.data[state.cursor]](state))
+        next_char = state.data[state.cursor]
+        return cast(BareItemType, _parse_map[next_char](state))
     except KeyError as why:
+        if next_char == ord(b"'"):
+            raise StructuredFieldError(
+                "String items must be double-quoted",
+                position=state.cursor,
+                offending_char=next_char,
+            ) from why
         raise StructuredFieldError(
-            f"Item starting with '{state.data[state.cursor : state.cursor + 1].decode('ascii')}'"
-            " can't be identified",
+            f"There is no Structured Field item starting with '{chr(next_char)}'",
             position=state.cursor,
-            offending_char=state.data[state.cursor],
+            offending_char=next_char,
         ) from why
 
 
