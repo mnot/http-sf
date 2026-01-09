@@ -41,17 +41,17 @@ def parse_key(state: ParserState) -> str:
                 raise StructuredFieldError(
                     "Trailing delimiter",
                     position=state.cursor,
-                    offending_char=state.data[state.cursor]
-                    if state.has_data()
-                    else None,
+                    offending_char=(
+                        state.data[state.cursor] if state.has_data() else None
+                    ),
                 )
             if state.has_data() and state.data[state.cursor] in UPPER_CHARS:
                 raise StructuredFieldError(
                     "Key cannot begin with an uppercase character",
                     position=state.cursor,
-                    offending_char=state.data[state.cursor]
-                    if state.has_data()
-                    else None,
+                    offending_char=(
+                        state.data[state.cursor] if state.has_data() else None
+                    ),
                 )
             raise StructuredFieldError(
                 "Key does not begin with lcalpha or *",
