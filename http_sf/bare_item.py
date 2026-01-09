@@ -43,7 +43,13 @@ def parse_bare_item(state: ParserState) -> BareItemType:
     except KeyError as why:
         if next_char == ord(b"'"):
             raise StructuredFieldError(
-                "String items must be double-quoted",
+                "Strings must be double-quoted",
+                position=state.cursor,
+                offending_char=next_char,
+            ) from why
+        if next_char == ord(b"("):
+            raise StructuredFieldError(
+                "Inner Lists are not valid here",
                 position=state.cursor,
                 offending_char=next_char,
             ) from why
