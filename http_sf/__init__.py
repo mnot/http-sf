@@ -37,6 +37,10 @@ from http_sf.types import StructuredType, Token, DisplayString, OnDuplicateKeyTy
 from http_sf.util import discard_ows
 
 
+from http_sf.state import ParserState
+from http_sf.errors import StructuredFieldError
+
+
 def parse(
     value: bytes,
     name: Optional[str] = None,
@@ -46,19 +50,33 @@ def parse(
     structure: StructuredType
     if name is not None:
         tltype = retrofit.get(name.lower(), tltype)
-    cursor = discard_ows(value)
-    if tltype in ["dict", "dictionary"]:
-        bytes_consumed, structure = parse_dictionary(value[cursor:], on_duplicate_key)
-    elif tltype == "list":
-        bytes_consumed, structure = parse_list(value[cursor:], on_duplicate_key)
-    elif tltype == "item":
-        bytes_consumed, structure = parse_item(value[cursor:], on_duplicate_key)
-    else:
-        raise KeyError("unrecognised top-level type")
-    cursor += bytes_consumed
-    if discard_ows(value[cursor:]) < len(value) - cursor:
-        raise ValueError("Trailing characters after value.")
-    return structure
+    state = ParserState(value)
+    discard_ows(state)
+    try:
+        if tltype in ["dict", "dictionary"]:
+            structure = parse_dictionary(state, on_duplicate_key)
+        elif tltype == "list":
+            structure = parse_list(state, on_duplicate_key)
+        elif tltype == "item":
+            structure = parse_item(state, on_duplicate_key)
+        else:
+            raise KeyError("unrecognised top-level type")
+        discard_ows(state)
+        if state.has_data():
+            raise StructuredFieldError(
+                "Trailing characters after value.",
+                position=state.cursor,
+                offending_char=state.data[state.cursor],
+            )
+        return structure
+    except StructuredFieldError as why:
+        if why.position is None:
+            why.position = state.cursor
+            try:
+                why.offending_char = state.data[state.cursor]
+            except IndexError:
+                why.offending_char = None
+        raise why
 
 
 def ser(structure: StructuredType) -> str:

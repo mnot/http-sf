@@ -5,6 +5,7 @@ TESTS=test/tests/*.json
 .PHONY: test
 test: $(TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS)
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
 
 $(TESTS):
 	git submodule update --init --recursive

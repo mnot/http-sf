@@ -1,15 +1,18 @@
-from typing import Tuple, List, cast, Union, Optional
+from typing import List, cast, Union, Optional
 
-from http_sf.item import parse_item, ser_item
-from http_sf.parameters import parse_params, ser_params
-from http_sf.types import (
+from .errors import StructuredFieldError
+from .item import parse_item, ser_item
+from .parameters import parse_params, ser_params
+from .state import ParserState
+from .types import (
     InnerListType,
     ItemType,
     ParamsType,
     ItemOrInnerListType,
     OnDuplicateKeyType,
 )
-from http_sf.util import discard_ows
+from .util import discard_ows
+
 
 PAREN_OPEN = ord(b"(")
 PAREN_CLOSE = ord(b")")
@@ -17,26 +20,32 @@ INNERLIST_DELIMS = set(b" )")
 
 
 def parse_innerlist(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, InnerListType]:
-    bytes_consumed = 1  # consume the "("
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> InnerListType:
+    state.cursor += 1  # consume the "("
     inner_list: List[ItemType] = []
     params: ParamsType = {}
     while True:
-        bytes_consumed += discard_ows(data[bytes_consumed:])
-        if data[bytes_consumed] == PAREN_CLOSE:
-            bytes_consumed += 1
-            params_consumed, params = parse_params(data[bytes_consumed:], on_duplicate_key)
-            bytes_consumed += params_consumed
-            return bytes_consumed, (inner_list, params)
-        item_consumed, item = parse_item(data[bytes_consumed:], on_duplicate_key)
-        bytes_consumed += item_consumed
+        discard_ows(state)
+        if state.data[state.cursor] == PAREN_CLOSE:
+            state.cursor += 1
+            params = parse_params(state, on_duplicate_key)
+            return (inner_list, params)
+        item = parse_item(state, on_duplicate_key)
         inner_list.append(item)
         try:
-            if data[bytes_consumed] not in INNERLIST_DELIMS:
-                raise ValueError("Inner list bad delimitation")
+            if state.data[state.cursor] not in INNERLIST_DELIMS:
+                raise StructuredFieldError(
+                    "Inner list bad delimitation",
+                    position=state.cursor,
+                    offending_char=state.data[state.cursor],
+                )
         except IndexError as why:
-            raise ValueError("End of inner list not found") from why
+            raise StructuredFieldError(
+                "End of inner list not found",
+                position=state.cursor,
+                offending_char=None,
+            ) from why
 
 
 def ser_innerlist(inner_list: InnerListType) -> str:
@@ -48,14 +57,14 @@ def ser_innerlist(inner_list: InnerListType) -> str:
 
 
 def parse_item_or_inner_list(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, Union[ItemType, InnerListType]]:
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Union[ItemType, InnerListType]:
     try:
-        if data[0] == PAREN_OPEN:
-            return parse_innerlist(data, on_duplicate_key)
+        if state.data[state.cursor] == PAREN_OPEN:
+            return parse_innerlist(state, on_duplicate_key)
     except IndexError:
         pass
-    return parse_item(data, on_duplicate_key)
+    return parse_item(state, on_duplicate_key)
 
 
 def ser_item_or_inner_list(thing: ItemOrInnerListType) -> str:

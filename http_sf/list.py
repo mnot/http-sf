@@ -1,33 +1,41 @@
-from typing import Tuple, Optional
+from typing import Optional
 
-from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
-from http_sf.types import ListType, OnDuplicateKeyType
-from http_sf.util import discard_http_ows
+from .errors import StructuredFieldError
+from .innerlist import parse_item_or_inner_list, ser_item_or_inner_list
+from .state import ParserState
+from .types import ListType, OnDuplicateKeyType
+from .util import discard_http_ows
 
 
 COMMA = ord(b",")
 
 
 def parse_list(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, ListType]:
-    bytes_consumed = 0
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> ListType:
     _list = []
-    data_len = len(data)
-    while bytes_consumed < data_len:
-        offset, member = parse_item_or_inner_list(data[bytes_consumed:], on_duplicate_key)
-        bytes_consumed += offset
+    data_len = len(state.data)
+    while state.cursor < data_len:
+        member = parse_item_or_inner_list(state, on_duplicate_key)
         _list.append(member)
-        bytes_consumed += discard_http_ows(data[bytes_consumed:])
-        if bytes_consumed == data_len:
-            return bytes_consumed, _list
-        if data[bytes_consumed] != COMMA:
-            raise ValueError("Trailing text after item in list")
-        bytes_consumed += 1
-        bytes_consumed += discard_http_ows(data[bytes_consumed:])
-        if bytes_consumed == data_len:
-            raise ValueError("Trailing comma at end of list")
-    return bytes_consumed, _list
+        discard_http_ows(state)
+        if state.cursor == data_len:
+            return _list
+        if state.data[state.cursor] != COMMA:
+            raise StructuredFieldError(
+                "Trailing text after item in list",
+                position=state.cursor,
+                offending_char=state.data[state.cursor],
+            )
+        state.cursor += 1
+        discard_http_ows(state)
+        if state.cursor == data_len:
+            raise StructuredFieldError(
+                "Trailing comma at end of list",
+                position=state.cursor,
+                offending_char=None,
+            )
+    return _list
 
 
 def ser_list(_list: ListType) -> str:

@@ -3,32 +3,26 @@ from datetime import datetime
 from decimal import Decimal
 import json
 from string import ascii_lowercase, ascii_uppercase, digits
-from typing import Tuple, Any, Union
+from typing import Any, Union
 
 from .types import StructuredType, Token, DisplayString
+from .state import ParserState
+from .errors import StructuredFieldError
 
 SPACE = ord(b" ")
 HTTP_OWS = set(b" \t")
 
 
-def discard_ows(data: bytes) -> int:
-    "Return the number of space characters at the beginning of data."
-    i = 0
-    ln = len(data)
-    while True:
-        if i == ln or data[i] != SPACE:
-            return i
-        i += 1
+def discard_ows(state: ParserState) -> None:
+    "Consume space characters at the beginning of data."
+    while state.has_data() and state.data[state.cursor] == SPACE:
+        state.cursor += 1
 
 
-def discard_http_ows(data: bytes) -> int:
-    "Return the number of space or HTAB characters at the beginning of data."
-    i = 0
-    ln = len(data)
-    while True:
-        if i == ln or data[i] not in HTTP_OWS:
-            return i
-        i += 1
+def discard_http_ows(state: ParserState) -> None:
+    "Consume space or HTAB characters at the beginning of data."
+    while state.has_data() and state.data[state.cursor] in HTTP_OWS:
+        state.cursor += 1
 
 
 KEY_START_CHARS = set((ascii_lowercase + "*").encode("ascii"))
@@ -37,17 +31,24 @@ UPPER_CHARS = set((ascii_uppercase).encode("ascii"))
 COMPAT = False
 
 
-def parse_key(data: bytes) -> Tuple[int, str]:
-    if data == b"" or data[0] not in KEY_START_CHARS:
-        if data == b"" or not (COMPAT and data[0] in UPPER_CHARS):
-            raise ValueError("Key does not begin with lcalpha or *")
-    bytes_consumed = 1
-    while bytes_consumed < len(data):
-        if data[bytes_consumed] not in KEY_CHARS:
-            if not (COMPAT and data[bytes_consumed] in UPPER_CHARS):
-                return bytes_consumed, data[:bytes_consumed].decode("ascii").lower()
-        bytes_consumed += 1
-    return bytes_consumed, data.decode("ascii").lower()
+def parse_key(state: ParserState) -> str:
+    if not state.has_data() or state.data[state.cursor] not in KEY_START_CHARS:
+        if not state.has_data() or not (
+            COMPAT and state.data[state.cursor] in UPPER_CHARS
+        ):
+            raise StructuredFieldError(
+                "Key does not begin with lcalpha or *",
+                position=state.cursor,
+                offending_char=state.data[state.cursor] if state.has_data() else None,
+            )
+    start_cursor = state.cursor
+    state.cursor += 1
+    while state.has_data():
+        if state.data[state.cursor] not in KEY_CHARS:
+            if not (COMPAT and state.data[state.cursor] in UPPER_CHARS):
+                return state.data[start_cursor : state.cursor].decode("ascii").lower()
+        state.cursor += 1
+    return state.data[start_cursor : state.cursor].decode("ascii").lower()
 
 
 def ser_key(key: str) -> str:

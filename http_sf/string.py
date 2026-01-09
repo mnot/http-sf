@@ -1,36 +1,49 @@
-from typing import Tuple
+from .state import ParserState
+from .errors import StructuredFieldError
 
 DQUOTE = ord('"')
 BACKSLASH = ord("\\")
 DQUOTEBACKSLASH = set([DQUOTE, BACKSLASH])
 
 
-def parse_string(data: bytes) -> Tuple[int, str]:
+def parse_string(state: ParserState) -> str:
     output_string = bytearray()
-    bytes_consumed = 1  # consume DQUOTE
+    state.cursor += 1  # consume DQUOTE
     while True:
         try:
-            char = data[bytes_consumed]
+            char = state.data[state.cursor]
         except IndexError as why:
-            raise ValueError(
-                "Reached end of input without finding a closing DQUOTE"
+            raise StructuredFieldError(
+                "Reached end of input without finding a closing DQUOTE",
+                position=state.cursor,
+                offending_char=None,
             ) from why
-        bytes_consumed += 1
+        state.cursor += 1
         if char == BACKSLASH:
             try:
-                next_char = data[bytes_consumed]
+                next_char = state.data[state.cursor]
             except IndexError as why:
-                raise ValueError("Last character of input was a backslash") from why
-            bytes_consumed += 1
+                raise StructuredFieldError(
+                    "Last character of input was a backslash",
+                    position=state.cursor,
+                    offending_char=None,
+                ) from why
+            state.cursor += 1
             if next_char not in DQUOTEBACKSLASH:
-                raise ValueError(
-                    f"Backslash before disallowed character '{chr(next_char)}'"
+                raise StructuredFieldError(
+                    f"Backslash before disallowed character '{chr(next_char)}'",
+                    position=state.cursor - 1,
+                    offending_char=next_char,
                 )
             output_string.append(next_char)
         elif char == DQUOTE:
-            return bytes_consumed, output_string.decode("ascii")
+            return output_string.decode("ascii")
         elif not 31 < char < 127:
-            raise ValueError("String contains disallowed character")
+            raise StructuredFieldError(
+                "String contains disallowed character",
+                position=state.cursor - 1,
+                offending_char=char,
+            )
         else:
             output_string.append(char)
 

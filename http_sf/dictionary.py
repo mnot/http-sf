@@ -1,9 +1,11 @@
-from typing import Tuple, cast, Optional
+from typing import cast, Optional
 
-from http_sf.innerlist import parse_item_or_inner_list, ser_item_or_inner_list
-from http_sf.parameters import parse_params, ser_params
-from http_sf.types import DictionaryType, ItemType, OnDuplicateKeyType
-from http_sf.util import discard_http_ows, ser_key, parse_key
+from .errors import StructuredFieldError
+from .innerlist import parse_item_or_inner_list, ser_item_or_inner_list
+from .parameters import parse_params, ser_params
+from .state import ParserState
+from .types import DictionaryType, ItemType, OnDuplicateKeyType
+from .util import discard_http_ows, ser_key, parse_key
 
 
 EQUALS = ord(b"=")
@@ -11,38 +13,46 @@ COMMA = ord(b",")
 
 
 def parse_dictionary(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, DictionaryType]:
-    bytes_consumed = 0
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> DictionaryType:
     dictionary = {}
-    data_len = len(data)
+    data_len = len(state.data)
     while True:
-        offset, this_key = parse_key(data[bytes_consumed:])
-        bytes_consumed += offset
+        this_key = parse_key(state)
         try:
-            is_equals = data[bytes_consumed] == EQUALS
-        except IndexError:
-            is_equals = False
-        if is_equals:
-            bytes_consumed += 1  # consume the "="
-            offset, member = parse_item_or_inner_list(data[bytes_consumed:], on_duplicate_key)
-            bytes_consumed += offset
-        else:
-            params_consumed, params = parse_params(data[bytes_consumed:], on_duplicate_key)
-            bytes_consumed += params_consumed
-            member = (True, params)
+            try:
+                is_equals = state.data[state.cursor] == EQUALS
+            except IndexError:
+                is_equals = False
+            if is_equals:
+                state.cursor += 1  # consume the "="
+                member = parse_item_or_inner_list(state, on_duplicate_key)
+            else:
+                params = parse_params(state, on_duplicate_key)
+                member = (True, params)
+        except StructuredFieldError as why:
+            why.context = this_key
+            raise why
         if on_duplicate_key and this_key in dictionary:
             on_duplicate_key(this_key, "dictionary")
         dictionary[this_key] = member
-        bytes_consumed += discard_http_ows(data[bytes_consumed:])
-        if bytes_consumed == data_len:
-            return bytes_consumed, dictionary
-        if data[bytes_consumed] != COMMA:
-            raise ValueError(f"Dictionary member '{this_key}' has trailing characters")
-        bytes_consumed += 1
-        bytes_consumed += discard_http_ows(data[bytes_consumed:])
-        if bytes_consumed == data_len:
-            raise ValueError("Dictionary has trailing comma")
+        discard_http_ows(state)
+        if state.cursor == data_len:
+            return dictionary
+        if state.data[state.cursor] != COMMA:
+            raise StructuredFieldError(
+                f"Dictionary member '{this_key}' has trailing characters",
+                position=state.cursor,
+                offending_char=state.data[state.cursor],
+            )
+        state.cursor += 1
+        discard_http_ows(state)
+        if state.cursor == data_len:
+            raise StructuredFieldError(
+                "Dictionary has trailing comma",
+                position=state.cursor,
+                offending_char=None,
+            )
 
 
 def ser_dictionary(dictionary: DictionaryType) -> str:

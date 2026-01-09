@@ -1,8 +1,9 @@
 from typing import Tuple, Optional
 
-from http_sf.bare_item import parse_bare_item, ser_bare_item
-from http_sf.types import BareItemType, ItemType, ParamsType, OnDuplicateKeyType
-from http_sf.parameters import parse_params, ser_params
+from .bare_item import parse_bare_item, ser_bare_item
+from .parameters import parse_params, ser_params
+from .state import ParserState
+from .types import BareItemType, ItemType, ParamsType, OnDuplicateKeyType
 
 PAREN_OPEN = ord(b"(")
 SEMICOLON = ord(b";")
@@ -10,12 +11,11 @@ EQUALS = ord(b"=")
 
 
 def parse_item(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, Tuple[BareItemType, ParamsType]]:
-    bytes_consumed, value = parse_bare_item(data)
-    param_bytes_consumed, params = parse_params(data[bytes_consumed:], on_duplicate_key)
-    bytes_consumed += param_bytes_consumed
-    return bytes_consumed, (value, params)
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> Tuple[BareItemType, ParamsType]:
+    value = parse_bare_item(state)
+    params = parse_params(state, on_duplicate_key)
+    return (value, params)
 
 
 def ser_item(item: ItemType) -> str:

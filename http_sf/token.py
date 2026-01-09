@@ -1,20 +1,20 @@
 from string import ascii_letters, digits
-from typing import Tuple
-
 from http_sf.types import Token
+from http_sf.state import ParserState
 
 TOKEN_START_CHARS = set((ascii_letters + "*").encode("ascii"))
 TOKEN_CHARS = set((ascii_letters + digits + ":/!#$%&'*+-.^_`|~").encode("ascii"))
 
 
-def parse_token(data: bytes) -> Tuple[int, Token]:
-    bytes_consumed = 1  # consume start char
-    size = len(data)
-    while bytes_consumed < size:
-        if data[bytes_consumed] not in TOKEN_CHARS:
-            return bytes_consumed, Token(data[:bytes_consumed].decode("ascii"))
-        bytes_consumed += 1
-    return bytes_consumed, Token(data[:bytes_consumed].decode("ascii"))
+def parse_token(state: ParserState) -> Token:
+    start_cursor = state.cursor
+    state.cursor += 1  # consume start char
+    size = len(state.data)
+    while state.cursor < size:
+        if state.data[state.cursor] not in TOKEN_CHARS:
+            return Token(state.data[start_cursor : state.cursor].decode("ascii"))
+        state.cursor += 1
+    return Token(state.data[start_cursor : state.cursor].decode("ascii"))
 
 
 def ser_token(token: Token) -> str:

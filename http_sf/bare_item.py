@@ -1,16 +1,19 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Tuple, cast
+from typing import cast
 
 from http_sf.boolean import parse_boolean, ser_boolean
 from http_sf.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
+from http_sf.date import parse_date, ser_date
 from http_sf.decimal import ser_decimal
+from http_sf.display_string import parse_display_string, ser_display_string
 from http_sf.integer import parse_number, ser_integer, NUMBER_START_CHARS
 from http_sf.string import parse_string, ser_string, DQUOTE
 from http_sf.token import parse_token, ser_token, TOKEN_START_CHARS
-from http_sf.date import parse_date, ser_date
-from http_sf.display_string import parse_display_string, ser_display_string
 from http_sf.types import BareItemType, Token, DisplayString
+
+from .errors import StructuredFieldError
+from .state import ParserState
 
 _parse_map = {
     DQUOTE: parse_string,
@@ -25,14 +28,23 @@ for c in NUMBER_START_CHARS:
     _parse_map[c] = parse_number
 
 
-def parse_bare_item(data: bytes) -> Tuple[int, BareItemType]:
-    if not data:
-        raise ValueError("Empty item")
+def parse_bare_item(state: ParserState) -> BareItemType:
+    if not state.has_data():
+        try:
+            char = state.data[state.cursor]
+        except IndexError:
+            char = None
+        raise StructuredFieldError(
+            "Empty item", position=state.cursor, offending_char=char
+        )
     try:
-        return cast(Tuple[int, BareItemType], _parse_map[data[0]](data))
+        return cast(BareItemType, _parse_map[state.data[state.cursor]](state))
     except KeyError as why:
-        raise ValueError(
-            f"Item starting with '{data[0:1].decode('ascii')}' can't be identified"
+        raise StructuredFieldError(
+            f"Item starting with '{state.data[state.cursor : state.cursor + 1].decode('ascii')}'"
+            " can't be identified",
+            position=state.cursor,
+            offending_char=state.data[state.cursor],
         ) from why
 
 

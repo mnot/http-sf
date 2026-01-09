@@ -1,8 +1,10 @@
-from typing import Tuple, Optional
+from typing import Optional
 
-from http_sf.bare_item import parse_bare_item, ser_bare_item
-from http_sf.types import BareItemType, ParamsType, OnDuplicateKeyType
-from http_sf.util import discard_ows, parse_key, ser_key
+from .bare_item import parse_bare_item, ser_bare_item
+from .errors import StructuredFieldError
+from .state import ParserState
+from .types import BareItemType, ParamsType, OnDuplicateKeyType
+from .util import discard_ows, parse_key, ser_key
 
 PAREN_OPEN = ord(b"(")
 SEMICOLON = ord(b";")
@@ -10,32 +12,33 @@ EQUALS = ord(b"=")
 
 
 def parse_params(
-    data: bytes, on_duplicate_key: Optional[OnDuplicateKeyType] = None
-) -> Tuple[int, ParamsType]:
-    bytes_consumed = 0
+    state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
+) -> ParamsType:
     params = {}
     while True:
         try:
-            if data[bytes_consumed] != SEMICOLON:
+            if state.data[state.cursor] != SEMICOLON:
                 break
         except IndexError:
             break
-        bytes_consumed += 1  # consume the ";"
-        bytes_consumed += discard_ows(data[bytes_consumed:])
-        offset, param_name = parse_key(data[bytes_consumed:])
-        bytes_consumed += offset
+        state.cursor += 1  # consume the ";"
+        discard_ows(state)
+        param_name = parse_key(state)
         param_value: BareItemType = True
         try:
-            if data[bytes_consumed] == EQUALS:
-                bytes_consumed += 1  # consume the "="
-                offset, param_value = parse_bare_item(data[bytes_consumed:])
-                bytes_consumed += offset
+            if state.data[state.cursor] == EQUALS:
+                state.cursor += 1  # consume the "="
+                try:
+                    param_value = parse_bare_item(state)
+                except StructuredFieldError as why:
+                    why.context = param_name
+                    raise why
         except IndexError:
             pass
         if on_duplicate_key and param_name in params:
             on_duplicate_key(param_name, "parameter")
         params[param_name] = param_value
-    return bytes_consumed, params
+    return params
 
 
 def ser_params(params: ParamsType) -> str:

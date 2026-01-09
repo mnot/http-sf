@@ -28,6 +28,25 @@ Because the library needs to know which kind of field it is, you need to hint th
 
 Note that if you use `name`, a `KeyError` will be raised if the type associated with the name isn't known, unless you also pass a `tltype` as a fallback.
 
+
+#### Error Handling
+
+When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is raised. This exception has attributes that can be used to debugging the error:
+
+* `position`: The character offset in the input bytes where the error was detected.
+* `offending_char`: The character at the position where the error was detected.
+* `context`: If the error occurred within a Dictionary or Parameter value, the key name.
+
+~~~ python
+>>> from http_sf import parse, StructuredFieldError
+>>> try:
+...     parse(b"foo; bar", tltype="item")
+... except StructuredFieldError as e:
+...     print(f"Error at {e.position}: {e}")
+...
+Error at 8: Parameter value definition expected
+~~~
+
 #### Duplicate Keys
 
 By default, duplicate keys in Dictionaries and Parameters are overwritten by the last value, as per the specification. If you wish to detect when this happens, you can set a callback:

@@ -1,14 +1,17 @@
 from datetime import datetime
-from typing import Tuple
-
+from .state import ParserState
+from .errors import StructuredFieldError
 from .integer import parse_integer
 
 
-def parse_date(data: bytes) -> Tuple[int, datetime]:
-    bytes_consumed, value = parse_integer(data[1:])
+def parse_date(state: ParserState) -> datetime:
+    state.cursor += 1  # consume "@"
+    value = parse_integer(state)
     if not isinstance(value, int):
-        raise ValueError("Non-integer Date")
-    return bytes_consumed + 1, datetime.fromtimestamp(value)
+        raise StructuredFieldError(
+            "Non-integer Date", position=state.cursor, offending_char=None
+        )
+    return datetime.fromtimestamp(value)
 
 
 def ser_date(inval: datetime) -> str:

@@ -1,49 +1,83 @@
-from typing import Tuple
-
+from .state import ParserState
+from .errors import StructuredFieldError
 from .types import DisplayString
 
 PERCENT = ord("%")
 DQUOTE = ord('"')
 
 
-def parse_display_string(data: bytes) -> Tuple[int, DisplayString]:
+def parse_display_string(state: ParserState) -> DisplayString:
     output_array = bytearray([])
-    if data[:2] != b'%"':
-        raise ValueError('Display string does not start with %"')
-    bytes_consumed = 2  # consume PERCENT DQUOTE
+    if not state.has_data() or state.data[state.cursor : state.cursor + 2] != b'%"':
+        try:
+            char = state.data[state.cursor]
+        except IndexError:
+            char = None
+        raise StructuredFieldError(
+            'Display string does not start with %"',
+            position=state.cursor,
+            offending_char=char,
+        )
+    state.cursor += 2  # consume PERCENT DQUOTE
     while True:
         try:
-            char = data[bytes_consumed]
+            char = state.data[state.cursor]
         except IndexError as why:
-            raise ValueError(
-                "Reached end of input without finding a closing DQUOTE"
+            raise StructuredFieldError(
+                "Reached end of input without finding a closing DQUOTE",
+                position=state.cursor,
+                offending_char=None,
             ) from why
-        bytes_consumed += 1
+        state.cursor += 1
         if char == PERCENT:
             try:
-                next_chars = data[bytes_consumed : bytes_consumed + 2]
+                next_chars = state.data[state.cursor : state.cursor + 2]
+                if len(next_chars) < 2:
+                    raise IndexError
             except IndexError as why:
-                raise ValueError("Incomplete percent encoding") from why
-            bytes_consumed += 2
+                raise StructuredFieldError(
+                    "Incomplete percent encoding",
+                    position=state.cursor,
+                    offending_char=None,
+                ) from why
+            state.cursor += 2
             if next_chars.lower() != next_chars:
-                raise ValueError("Uppercase percent encoding")
+                raise StructuredFieldError(
+                    "Uppercase percent encoding",
+                    position=state.cursor - 2,
+                    offending_char=next_chars[0],
+                )
             if not all(c in b"0123456789abcdef" for c in next_chars):
-                raise ValueError("Invalid percent encoding")
+                raise StructuredFieldError(
+                    "Invalid percent encoding",
+                    position=state.cursor - 2,
+                    offending_char=next_chars[0],
+                )
             try:
                 octet = int(next_chars, base=16)
             except ValueError as why:
-                raise ValueError("Invalid percent encoding") from why
+                raise StructuredFieldError(
+                    "Invalid percent encoding",
+                    position=state.cursor - 2,
+                    offending_char=next_chars[0],
+                ) from why
             output_array.append(octet)
         elif char == DQUOTE:
             try:
                 output_string = output_array.decode("utf-8")
             except UnicodeDecodeError as why:
-                raise ValueError("Invalid UTF-8") from why
-            return bytes_consumed, DisplayString(output_string)
+                raise StructuredFieldError(
+                    "Invalid UTF-8", position=state.cursor - 1, offending_char=None
+                ) from why
+            return DisplayString(output_string)
         elif 31 < char < 127:
             output_array.append(char)
         else:
-            raise ValueError("String contains disallowed character")
+            raise StructuredFieldError(
+                "String contains disallowed character",
+                position=state.cursor - 1,
+                offending_char=char,
+            )
 
 
 def ser_display_string(inval: DisplayString) -> str:
