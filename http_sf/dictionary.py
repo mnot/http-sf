@@ -40,8 +40,15 @@ def parse_dictionary(
         if state.cursor == data_len:
             return dictionary
         if state.data[state.cursor] != COMMA:
+            if not is_equals:
+                offending_char = state.data[state.cursor]
+                raise StructuredFieldError(
+                    f"'{this_key}' should be followed by '=', not '{chr(offending_char)}'",
+                    position=state.cursor,
+                    offending_char=offending_char,
+                )
             raise StructuredFieldError(
-                f"Dictionary member '{this_key}' has trailing characters",
+                f"'{this_key}' has trailing characters after the value",
                 position=state.cursor,
                 offending_char=state.data[state.cursor],
             )
