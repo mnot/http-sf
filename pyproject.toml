@@ -7,12 +7,13 @@ authors = [
 description = "Parse and serialise HTTP Structured Fields"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE.md"}
+license = "MIT"
+license-files = ["LICENSE.md"]
 classifiers = [
     "Operating System :: OS Independent",
-    "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: MIT License"
+    "Development Status :: 4 - Beta"
 ]
+
 dependencies = [
     "typing_extensions"
 ]
@@ -38,6 +39,8 @@ version = {attr = "http_sf.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["http_sf", "http_sf.*"]
+namespaces = false
 
 [tool.setuptools]
 include-package-data = true
