@@ -3,8 +3,7 @@
 import argparse
 import sys
 
-from . import parse
-from .util import to_json
+from . import parse, to_json
 
 
 parser = argparse.ArgumentParser(

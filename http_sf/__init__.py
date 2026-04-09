@@ -33,12 +33,36 @@ from http_sf.dictionary import parse_dictionary, ser_dictionary
 from http_sf.item import parse_item, ser_item
 from http_sf.list import parse_list, ser_list
 from http_sf.retrofit import retrofit
-from http_sf.types import StructuredType, Token, DisplayString, OnDuplicateKeyType
-from http_sf.util import discard_ows
-
-
+from http_sf.types import (
+    StructuredType,
+    Token,
+    DisplayString,
+    OnDuplicateKeyType,
+    DictionaryType,
+    ListType,
+    ItemType,
+    InnerListType,
+)
+from http_sf.util import discard_ows, to_json, from_json
 from http_sf.state import ParserState
 from http_sf.errors import StructuredFieldError
+
+
+__all__ = [
+    "parse",
+    "ser",
+    "to_json",
+    "from_json",
+    "StructuredFieldError",
+    "StructuredType",
+    "DictionaryType",
+    "ListType",
+    "ItemType",
+    "InnerListType",
+    "Token",
+    "DisplayString",
+    "OnDuplicateKeyType",
+]
 
 
 def parse(

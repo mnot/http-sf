@@ -1,7 +1,6 @@
 
 import sys
-from http_sf import parse
-from http_sf.errors import StructuredFieldError
+from http_sf import parse, StructuredFieldError
 
 def test_position():
     print("Testing Error Positioning...")
