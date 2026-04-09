@@ -4,9 +4,9 @@ from decimal import Decimal
 import json
 import re
 from string import ascii_lowercase, ascii_uppercase, digits
-from typing import Any, Union
+from typing import Any
 
-from .types import StructuredType, Token, DisplayString
+from .types import StructuredType, Token, DisplayString, JsonDict
 from .state import ParserState
 from .errors import StructuredFieldError
 
@@ -92,7 +92,7 @@ def from_json(instr: str) -> StructuredType:
     return suite
 
 
-def json_dump(inobj: Any) -> Union[Any, dict]:
+def json_dump(inobj: Any) -> Any:
     if isinstance(inobj, Token):
         return {"__type": "token", "value": str(inobj)}
     if isinstance(inobj, bytes):
@@ -106,7 +106,7 @@ def json_dump(inobj: Any) -> Union[Any, dict]:
     raise ValueError(f"Unknown object type - {inobj}")
 
 
-def json_load(inobj: dict) -> Any:
+def json_load(inobj: JsonDict) -> Any:
     objtype = inobj.get("__type", None)
     if not objtype:
         return inobj

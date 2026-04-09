@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import cast
+from typing import Dict, Callable, Any, Type
 
 from http_sf.boolean import parse_boolean, ser_boolean
 from http_sf.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
@@ -15,7 +15,7 @@ from http_sf.types import BareItemType, Token, DisplayString
 from .errors import StructuredFieldError
 from .state import ParserState
 
-_parse_map = {
+_parse_map: Dict[int, Callable[[ParserState], BareItemType]] = {
     DQUOTE: parse_string,
     BYTE_DELIMIT: parse_byteseq,
     ord(b"?"): parse_boolean,
@@ -39,7 +39,7 @@ def parse_bare_item(state: ParserState) -> BareItemType:
         )
     try:
         next_char = state.data[state.cursor]
-        return cast(BareItemType, _parse_map[next_char](state))
+        return _parse_map[next_char](state)
     except KeyError as why:
         if next_char == ord(b"'"):
             raise StructuredFieldError(
@@ -60,7 +60,7 @@ def parse_bare_item(state: ParserState) -> BareItemType:
         ) from why
 
 
-_ser_map = {
+_ser_map: Dict[Type[Any], Callable[[Any], str]] = {
     int: ser_integer,
     float: ser_decimal,
     str: ser_string,
@@ -71,7 +71,7 @@ _ser_map = {
 
 def ser_bare_item(item: BareItemType) -> str:
     try:
-        return _ser_map[type(item)](item)  # type: ignore
+        return _ser_map[type(item)](item)
     except KeyError:
         pass
     if isinstance(item, Token):

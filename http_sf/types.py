@@ -1,7 +1,7 @@
 from collections import UserString
 from datetime import datetime
 from decimal import Decimal
-from typing import Union, Dict, List, Tuple, Callable
+from typing import Union, Dict, List, Tuple, Callable, Any
 from typing_extensions import TypeAlias
 
 
@@ -32,3 +32,4 @@ ListType: TypeAlias = List[Union[ItemType, InnerListType]]
 DictionaryType: TypeAlias = Dict[str, Union[ItemType, InnerListType]]
 StructuredType: TypeAlias = Union[ItemType, ListType, DictionaryType]
 OnDuplicateKeyType: TypeAlias = Callable[[str, str], None]
+JsonDict: TypeAlias = Dict[str, Any]
