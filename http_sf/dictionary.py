@@ -1,12 +1,11 @@
-from typing import cast, Optional
+from typing import Optional, cast
 
 from .errors import StructuredFieldError
 from .innerlist import parse_item_or_inner_list, ser_item_or_inner_list
 from .parameters import parse_params, ser_params
 from .state import ParserState
 from .types import DictionaryType, ItemType, OnDuplicateKeyType
-from .util import discard_http_ows, ser_key, parse_key
-
+from .util import discard_http_ows, parse_key, ser_key
 
 EQUALS = ord(b"=")
 COMMA = ord(b",")

@@ -3,7 +3,7 @@ from typing import Optional
 from .bare_item import parse_bare_item, ser_bare_item
 from .errors import StructuredFieldError
 from .state import ParserState
-from .types import BareItemType, ParamsType, OnDuplicateKeyType
+from .types import BareItemType, OnDuplicateKeyType, ParamsType
 from .util import discard_ows, parse_key, ser_key
 
 PAREN_OPEN = ord(b"(")

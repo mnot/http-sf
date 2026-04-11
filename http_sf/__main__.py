@@ -5,7 +5,6 @@ import sys
 
 from . import parse, to_json
 
-
 parser = argparse.ArgumentParser(
     description="Validate and show data model of a Structured Field Value."
 )

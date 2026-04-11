@@ -1,5 +1,5 @@
-from .state import ParserState
 from .errors import StructuredFieldError
+from .state import ParserState
 from .types import DisplayString
 
 PERCENT = ord("%")

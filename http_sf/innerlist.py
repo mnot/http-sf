@@ -1,4 +1,4 @@
-from typing import List, cast, Union, Optional
+from typing import List, Optional, Union, cast
 
 from .errors import StructuredFieldError
 from .item import parse_item, ser_item
@@ -6,13 +6,12 @@ from .parameters import parse_params, ser_params
 from .state import ParserState
 from .types import (
     InnerListType,
-    ItemType,
-    ParamsType,
     ItemOrInnerListType,
+    ItemType,
     OnDuplicateKeyType,
+    ParamsType,
 )
 from .util import discard_ows
-
 
 PAREN_OPEN = ord(b"(")
 PAREN_CLOSE = ord(b")")

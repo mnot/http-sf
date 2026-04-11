@@ -1,9 +1,9 @@
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 from .bare_item import parse_bare_item, ser_bare_item
 from .parameters import parse_params, ser_params
 from .state import ParserState
-from .types import BareItemType, ItemType, ParamsType, OnDuplicateKeyType
+from .types import BareItemType, ItemType, OnDuplicateKeyType, ParamsType
 
 PAREN_OPEN = ord(b"(")
 SEMICOLON = ord(b";")

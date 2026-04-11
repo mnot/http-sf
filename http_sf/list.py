@@ -6,7 +6,6 @@ from .state import ParserState
 from .types import ListType, OnDuplicateKeyType
 from .util import discard_http_ows
 
-
 COMMA = ord(b",")
 
 

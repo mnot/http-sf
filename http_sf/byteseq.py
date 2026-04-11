@@ -1,8 +1,9 @@
 import base64
 import binascii
 from string import ascii_letters, digits
-from .state import ParserState
+
 from .errors import StructuredFieldError
+from .state import ParserState
 
 BYTE_DELIMIT = ord(b":")
 B64CONTENT = set((ascii_letters + digits + "+/=").encode("ascii"))

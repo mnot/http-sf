@@ -1,5 +1,5 @@
-from .state import ParserState
 from .errors import StructuredFieldError
+from .state import ParserState
 
 QUESTION = ord(b"?")
 ONE = ord(b"1")

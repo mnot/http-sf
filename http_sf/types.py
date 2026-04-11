@@ -1,7 +1,8 @@
 from collections import UserString
 from datetime import datetime
 from decimal import Decimal
-from typing import Union, Dict, List, Tuple, Callable, Any
+from typing import Any, Callable, Dict, List, Tuple, Union
+
 from typing_extensions import TypeAlias
 
 

@@ -1,7 +1,8 @@
 from datetime import datetime
-from .state import ParserState
+
 from .errors import StructuredFieldError
 from .integer import parse_integer
+from .state import ParserState
 
 
 def parse_date(state: ParserState) -> datetime:

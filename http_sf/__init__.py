@@ -27,26 +27,25 @@ THE SOFTWARE.
 
 __version__ = "1.2.0"
 
-from typing import Tuple, List, Dict, Optional, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
 from http_sf.dictionary import parse_dictionary, ser_dictionary
+from http_sf.errors import StructuredFieldError
 from http_sf.item import parse_item, ser_item
 from http_sf.list import parse_list, ser_list
 from http_sf.retrofit import retrofit
+from http_sf.state import ParserState
 from http_sf.types import (
+    DictionaryType,
+    DisplayString,
+    InnerListType,
+    ItemType,
+    ListType,
+    OnDuplicateKeyType,
     StructuredType,
     Token,
-    DisplayString,
-    OnDuplicateKeyType,
-    DictionaryType,
-    ListType,
-    ItemType,
-    InnerListType,
 )
-from http_sf.util import discard_ows, to_json, from_json
-from http_sf.state import ParserState
-from http_sf.errors import StructuredFieldError
-
+from http_sf.util import discard_ows, from_json, to_json
 
 __all__ = [
     "parse",

@@ -1,16 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Callable, Any, Type
+from typing import Any, Callable, Dict, Type
 
 from http_sf.boolean import parse_boolean, ser_boolean
-from http_sf.byteseq import parse_byteseq, ser_byteseq, BYTE_DELIMIT
+from http_sf.byteseq import BYTE_DELIMIT, parse_byteseq, ser_byteseq
 from http_sf.date import parse_date, ser_date
 from http_sf.decimal import ser_decimal
 from http_sf.display_string import parse_display_string, ser_display_string
-from http_sf.integer import parse_number, ser_integer, NUMBER_START_CHARS
-from http_sf.string import parse_string, ser_string, DQUOTE
-from http_sf.token import parse_token, ser_token, TOKEN_START_CHARS
-from http_sf.types import BareItemType, Token, DisplayString
+from http_sf.integer import NUMBER_START_CHARS, parse_number, ser_integer
+from http_sf.string import DQUOTE, parse_string, ser_string
+from http_sf.token import TOKEN_START_CHARS, parse_token, ser_token
+from http_sf.types import BareItemType, DisplayString, Token
 
 from .errors import StructuredFieldError
 from .state import ParserState
