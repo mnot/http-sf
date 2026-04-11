@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "black", "pylint", "pytest", "pytest-md", "validate-pyproject", "build"]
+dev = ["mypy", "black", "isort", "pylint", "pytest", "pytest-md", "validate-pyproject", "build"]
 
 [project.urls]
 homepage = "https://github.com/mnot/http-sf"
@@ -40,6 +40,7 @@ version = {attr = "http_sf.__version__"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["http_sf", "http_sf.*"]
+exclude = ["build*", "dist*"]
 namespaces = false
 
 [tool.setuptools]
@@ -80,3 +81,6 @@ min-public-methods=1
 
 [tool.pylint.similarities]
 min-similarity-lines = 10
+
+[tool.isort]
+profile = "black"
