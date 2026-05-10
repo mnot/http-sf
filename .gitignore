@@ -12,3 +12,4 @@ __pycache__
 /*.egg-info
 /test/blab
 /test/blab.c
+.claude
