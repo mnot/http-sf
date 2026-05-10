@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .errors import StructuredFieldError
 from .integer import parse_integer
@@ -12,7 +12,7 @@ def parse_date(state: ParserState) -> datetime:
         raise StructuredFieldError(
             "Non-integer Date", position=state.cursor, offending_char=None
         )
-    return datetime.fromtimestamp(value)
+    return datetime.fromtimestamp(value, tz=timezone.utc)
 
 
 def ser_date(inval: datetime) -> str:
