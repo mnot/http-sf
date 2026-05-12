@@ -12,7 +12,12 @@ def parse_date(state: ParserState) -> datetime:
         raise StructuredFieldError(
             "Non-integer Date", position=state.cursor, offending_char=None
         )
-    return datetime.fromtimestamp(value, tz=timezone.utc)
+    try:
+        return datetime.fromtimestamp(value, tz=timezone.utc)
+    except (ValueError, OSError) as why:
+        raise StructuredFieldError(
+            "Date value out of range", position=state.cursor, offending_char=None
+        ) from why
 
 
 def ser_date(inval: datetime) -> str:
