@@ -115,7 +115,10 @@ def json_load(inobj: JsonDict) -> Any:
     if objtype == "binary":
         return base64.b32decode(inobj["value"])
     if objtype == "date":
-        return datetime.fromtimestamp(inobj["value"], tz=timezone.utc)
+        try:
+            return datetime.fromtimestamp(inobj["value"], tz=timezone.utc)
+        except (ValueError, OSError):
+            return int(inobj["value"])
     if objtype == "displaystring":
         return DisplayString(inobj["value"])
     raise ValueError(f"Unknown object type - {inobj}")
