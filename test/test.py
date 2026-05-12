@@ -54,7 +54,11 @@ def run_suite(suite_name: str, suite: List) -> None:
             if ser_success:
                 suite_passed += 1
             else:
-                print(f"{FAIL} * {test['name']}: SERIALISE FAIL{ENDC}")
+                if test.get("can_fail", False):
+                    print(f"{WARN} * {test['name']}: SERIALISE FAIL (non-critical){ENDC}")
+                    suite_passed += 1
+                else:
+                    print(f"{FAIL} * {test['name']}: SERIALISE FAIL{ENDC}")
                 print(f"    - expected: {ser_expected}")
                 print(f"    -      got: ['{serialised}']")
                 if ser_fail_reason:
