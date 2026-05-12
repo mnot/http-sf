@@ -61,7 +61,9 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
         elif _type is INTEGER and char == PERIOD:
             # spec says 12, but character is appended afterwards
             if num_length > 13:
-                raise ValueError("Decimal too long.")
+                raise StructuredFieldError(
+                    "Decimal too long.", position=state.cursor, offending_char=None
+                )
         state.cursor += 1
         num_length = state.cursor - num_start - 1
         if char in DIGITS:
