@@ -5,6 +5,7 @@ TESTS=test/tests/*.json
 .PHONY: test
 test: $(TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS)
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat_full.py $(TESTS)
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_error_contract.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
