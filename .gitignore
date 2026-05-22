@@ -1,3 +1,4 @@
+# DO NOT EDIT outside marked project regions — managed by https://github.com/mnot/pyproject-tmpl
 *.pyc
 __pycache__
 .DS_Store
@@ -10,6 +11,8 @@ __pycache__
 /.pytest_cache
 /.venv
 /*.egg-info
+
+# === pyproject-tmpl: start "extras" ===
 /test/blab
 /test/blab.c
-.claude
+# === pyproject-tmpl: end "extras" ===
