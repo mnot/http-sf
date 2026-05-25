@@ -24,6 +24,9 @@
 #     Bump the __version__ in $PROJECT/__init__.py using semver (https://semver.org/)
 # version <<< COMMITS TO GIT
 #     Bump the version according to $VERSIONING (default: semver-micro).
+# version-calver, version-semver-{major,minor,micro} <<< COMMITS TO GIT
+#     Explicit variants of `version` that pick the bump flavor directly
+#     (so `make version-<TAB>` offers them in shell completion).
 # build
 #     Build the project
 # pypi-pub
@@ -108,8 +111,13 @@ bump-semver-minor: py_version
 bump-semver-major: py_version
 	sed -i "" -e "s/$(VERSION)/$(NEXT_SEMMAJOR).0.0/" $(PROJECT)/__init__.py
 
-.PHONY: version
-version: typecheck lint test bump-$(VERSIONING)
+# `version` dispatches to `version-$(VERSIONING)`; the pattern rule below
+# does the actual work. The explicit `version-*` aliases exist so shell
+# completion can offer them after `make version-<TAB>`.
+.PHONY: version version-calver version-semver-major version-semver-minor version-semver-micro
+version: version-$(VERSIONING)
+
+version-%: typecheck lint test bump-%
 	git add $(PROJECT)/__init__.py
 	git commit -m 'bump version'
 
