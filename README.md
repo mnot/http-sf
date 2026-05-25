@@ -117,6 +117,21 @@ When using `ser`, if an Item or Inner List doesn't have parameters, they can be 
 Note that `ser` produces a string, not a bytes-like object.
 
 
+## Migrating from `http_sfv`
+
+If you have code that uses the deprecated [http_sfv](https://pypi.org/project/http-sfv/) package, a drop-in compatibility layer is available in `http_sf.compat`. It provides the same object-oriented `Dictionary`, `List`, `Item`, `InnerList`, `Token`, and `DisplayString` classes built on top of this library's functional API, so existing code typically only needs an import change:
+
+~~~ python
+# Before
+from http_sfv import Dictionary, List, Item, Token
+
+# After
+from http_sf.compat import Dictionary, List, Item, Token
+~~~
+
+The compat layer exposes the same `.parse(bytes)` / `str(...)` workflow, `.value` / `.params` attributes, structural list/dict behaviour, and Item equality semantics (compared by value, ignoring parameters) as `http_sfv`. New code should prefer the functional `parse` / `ser` API documented above.
+
+
 ## Command Line Use
 
 You can validate and examine the data model of a field value by calling the library on the command line, using `-d`, `-l` and `-i` to denote dictionaries, lists or items respectively; e.g.,
