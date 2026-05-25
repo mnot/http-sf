@@ -111,13 +111,16 @@ bump-semver-minor: py_version
 bump-semver-major: py_version
 	sed -i "" -e "s/$(VERSION)/$(NEXT_SEMMAJOR).0.0/" $(PROJECT)/__init__.py
 
-# `version` dispatches to `version-$(VERSIONING)`; the pattern rule below
-# does the actual work. The explicit `version-*` aliases exist so shell
-# completion can offer them after `make version-<TAB>`.
-.PHONY: version version-calver version-semver-major version-semver-minor version-semver-micro
+# `version` dispatches to `version-$(VERSIONING)`; the static pattern rule
+# below does the actual work. Listing the variants explicitly (rather than
+# using a `version-%` implicit rule) is required for two reasons: GNU make
+# won't apply implicit pattern rules to .PHONY targets, and shell
+# completion needs literal names to offer after `make version-<TAB>`.
+VERSION_TARGETS := version-calver version-semver-major version-semver-minor version-semver-micro
+.PHONY: version $(VERSION_TARGETS)
 version: version-$(VERSIONING)
 
-version-%: typecheck lint test bump-%
+$(VERSION_TARGETS): version-%: typecheck lint test bump-%
 	git add $(PROJECT)/__init__.py
 	git commit -m 'bump version'
 
