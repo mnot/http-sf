@@ -27,7 +27,9 @@ ENDC = "\033[0m"
 def load_tests(files: Any = None) -> List[Tuple[Path, List[Any]]]:
     suites = []
     if not files:
-        files = Path("test/tests").glob("*.json")
+        files = sorted(Path("test/tests").glob("*.json")) + sorted(
+            Path("test/tests/serialisation-tests").glob("*.json")
+        )
     for filename in files:
         with open(filename, encoding="utf-8") as fh:
             suite = from_json(fh.read())
@@ -98,7 +100,11 @@ def test_parse(test: dict) -> Tuple[bool, Any, Any]:
 
 
 def test_serialise(test: dict) -> Tuple[bool, Any, Any, Any]:
-    expected = test.get("canonical", test["raw"])
+    must_fail = test.get("must_fail", False)
+    if must_fail:
+        expected = "FAIL"
+    else:
+        expected = test["canonical"] if "canonical" in test else test["raw"]
     output: Any = None
     ser_fail_reason = None
     try:
@@ -109,7 +115,9 @@ def test_serialise(test: dict) -> Tuple[bool, Any, Any, Any]:
     except Exception:
         sys.stderr.write(f"*** TEST ERROR in {test['name']}\n")
         raise
-    if output is None:
+    if must_fail:
+        test_success = output is None
+    elif output is None:
         test_success = expected == []
     else:
         test_success = expected == [output]
@@ -121,25 +129,28 @@ def run_suite(suite_name: str, suite: List[dict]) -> Tuple[int, int]:
     suite_tests = 0
     suite_passed = 0
     for test in suite:
-        suite_tests += 1
-        parse_ok, parsed, parse_reason = test_parse(test)
-        if parse_ok:
-            suite_passed += 1
-        else:
-            if test.get("can_fail", False):
-                print(
-                    f"{WARN}  * {test['name']}: PARSE FAIL (non-critical){ENDC}"
-                )
+        # Cases in serialisation-tests/ have no "raw"; parse cases that must_fail
+        # have no "expected". Run each phase only where the suite gives it input.
+        if "raw" in test:
+            suite_tests += 1
+            parse_ok, parsed, parse_reason = test_parse(test)
+            if parse_ok:
                 suite_passed += 1
             else:
-                print(f"{FAIL}  * {test['name']}: PARSE FAIL{ENDC}")
-            print(f"    -      raw: {test['raw']}")
-            print(f"    - expected: {test.get('expected', 'FAIL')}")
-            print(f"    -      got: {parsed}")
-            if parse_reason:
-                print(f"    -   reason: {parse_reason}")
+                if test.get("can_fail", False):
+                    print(
+                        f"{WARN}  * {test['name']}: PARSE FAIL (non-critical){ENDC}"
+                    )
+                    suite_passed += 1
+                else:
+                    print(f"{FAIL}  * {test['name']}: PARSE FAIL{ENDC}")
+                print(f"    -      raw: {test['raw']}")
+                print(f"    - expected: {test.get('expected', 'FAIL')}")
+                print(f"    -      got: {parsed}")
+                if parse_reason:
+                    print(f"    -   reason: {parse_reason}")
 
-        if not test.get("must_fail", False):
+        if "expected" in test:
             suite_tests += 1
             ser_ok, serialised, ser_expected, ser_reason = test_serialise(test)
             if ser_ok:

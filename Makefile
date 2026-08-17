@@ -1,16 +1,17 @@
 PROJECT=http_sf
 BLAB=test/blab
 TESTS=test/tests/*.json
+SER_TESTS=test/tests/serialisation-tests/*.json
 
 .PHONY: test
-test: $(TESTS) venv
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS)
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat_full.py $(TESTS)
+test: $(TESTS) $(SER_TESTS) venv
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS) $(SER_TESTS)
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat_full.py $(TESTS) $(SER_TESTS)
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_error_contract.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
 
-$(TESTS):
+$(TESTS) $(SER_TESTS):
 	git submodule update --init --recursive
 
 .PHONY: update-tests
