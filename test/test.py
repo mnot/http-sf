@@ -18,7 +18,9 @@ ENDC = "\033[0m"
 def load_tests(files=None) -> List:
     suites = []
     if not files:
-        files = Path("test/tests").glob("*.json")
+        files = sorted(Path("test/tests").glob("*.json")) + sorted(
+            Path("test/tests/serialisation-tests").glob("*.json")
+        )
     for filename in files:
         suite = from_json(open(filename).read())
         suites.append((filename, suite))
@@ -30,23 +32,26 @@ def run_suite(suite_name: str, suite: List) -> None:
     suite_tests = 0
     suite_passed = 0
     for test in suite:
-        suite_tests += 1
-        parse_success, parsed, parse_fail_reason = test_parse(test)
-        if parse_success:
-            suite_passed += 1
-        else:
-            if test.get("can_fail", False):
-                print(f"{WARN}  * {test['name']}: PARSE FAIL (non-critical){ENDC}")
+        # Cases in serialisation-tests/ have no "raw"; parse cases that must_fail
+        # have no "expected". Run each phase only where the suite gives it input.
+        if "raw" in test:
+            suite_tests += 1
+            parse_success, parsed, parse_fail_reason = test_parse(test)
+            if parse_success:
                 suite_passed += 1
             else:
-                print(f"{FAIL}  * {test['name']}: PARSE FAIL{ENDC}")
-            print(f"    -      raw: {test['raw']}")
-            print(f"    - expected: {test.get('expected', 'FAIL')}")
-            print(f"    -      got: {parsed}")
-            if parse_fail_reason:
-                print(f"    -   reason: {parse_fail_reason}")
+                if test.get("can_fail", False):
+                    print(f"{WARN}  * {test['name']}: PARSE FAIL (non-critical){ENDC}")
+                    suite_passed += 1
+                else:
+                    print(f"{FAIL}  * {test['name']}: PARSE FAIL{ENDC}")
+                print(f"    -      raw: {test['raw']}")
+                print(f"    - expected: {test.get('expected', 'FAIL')}")
+                print(f"    -      got: {parsed}")
+                if parse_fail_reason:
+                    print(f"    -   reason: {parse_fail_reason}")
 
-        if not test.get("must_fail", False):
+        if "expected" in test:
             suite_tests += 1
             ser_success, serialised, ser_expected, ser_fail_reason = test_serialise(
                 test
@@ -92,7 +97,11 @@ def test_parse(test: dict) -> Union[bool, Any, str]:
 
 
 def test_serialise(test: dict) -> Union[bool, str, str, str]:
-    expected = test.get("canonical", test["raw"])
+    must_fail = test.get("must_fail", False)
+    if must_fail:
+        expected = "FAIL"
+    else:
+        expected = test["canonical"] if "canonical" in test else test["raw"]
     output = None
     serialise_fail_reason = None
     try:
@@ -102,7 +111,9 @@ def test_serialise(test: dict) -> Union[bool, str, str, str]:
     except Exception:
         sys.stderr.write(f"*** TEST ERROR in {test['name']}\n")
         raise
-    if output is None:
+    if must_fail:
+        test_success = output is None
+    elif output is None:
         test_success = expected == []
     else:
         test_success = expected == [output]
