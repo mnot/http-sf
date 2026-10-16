@@ -6,12 +6,10 @@ SER_TESTS=test/tests/serialisation-tests/*.json
 .PHONY: test
 test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS) $(SER_TESTS)
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat_full.py $(TESTS) $(SER_TESTS)
-	@# Every other test/test_*.py is a self-contained script; new ones are picked up
-	@# automatically. test_compat_full.py takes the JSON files and test_perf.py is
-	@# the benchmark (see the perf target).
+	@# Every test/test_*.py is a self-contained script; new ones are picked up
+	@# automatically. test_perf.py is the benchmark (see the perf target).
 	@for t in test/test_*.py; do \
-		case $$t in test/test_compat_full.py|test/test_perf.py) continue;; esac; \
+		case $$t in test/test_perf.py) continue;; esac; \
 		echo "== $$t"; \
 		PYTHONPATH=.:$(VENV) $(VENV)/python $$t || exit 1; \
 	done
