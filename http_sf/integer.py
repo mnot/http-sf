@@ -73,7 +73,9 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
                 raise StructuredFieldError(
                     "Decimal too long.",
                     position=state.cursor,
-                    offending_char=state.data[state.cursor],
+                    offending_char=(
+                        state.data[state.cursor] if state.has_data() else None
+                    ),
                 )
             _type = DECIMAL
             decimal_index = state.cursor
