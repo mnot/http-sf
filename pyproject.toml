@@ -8,7 +8,7 @@ description = "Parse and serialise HTTP Structured Fields"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-license-files = ["LICENSE.md"]
+license-files = ["LICENCE.md"]
 classifiers = [
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta"
@@ -29,7 +29,7 @@ homepage = "https://github.com/mnot/http-sf"
 
 [build-system]
 requires = [
-    "setuptools>=42",
+    "setuptools>=77",
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
