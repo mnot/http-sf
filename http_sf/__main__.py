@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from . import parse, to_json
+from .retrofit import retrofit
 
 parser = argparse.ArgumentParser(
     description="Validate and show data model of a Structured Field Value."
@@ -60,6 +61,10 @@ if args.stdin:
     input_string = sys.stdin.read()
 else:
     input_string = args.input_string
+
+if args.field_name and args.field_name.lower() not in retrofit:
+    sys.stderr.write(f"FAIL: no known top-level type for field '{args.field_name}'\n")
+    sys.exit(1)
 
 try:
     input_bytes = input_string.encode("utf-8")

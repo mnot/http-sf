@@ -4,7 +4,7 @@ Contributions - in the form of code, bugs, or ideas - are very welcome!
 
 ## Intellectual Property
 
-By contributing code, bugs or enhancements to this project (whether that be through pull requests, the issues list, e-mail or other means), you are licensing your contribution under the [project's terms](LICENSE.md).
+By contributing code, bugs or enhancements to this project (whether that be through pull requests, the issues list, e-mail or other means), you are licensing your contribution under the [project's terms](LICENCE.md).
 
 
 ## Coding Conventions

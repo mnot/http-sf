@@ -12,7 +12,7 @@ B64CONTENT = set((ascii_letters + digits + "+/=").encode("ascii"))
 def parse_byteseq(state: ParserState) -> bytes:
     state.cursor += 1
     try:
-        end_delimit = state.data[state.cursor :].index(BYTE_DELIMIT)
+        end_delimit = state.data.index(BYTE_DELIMIT, state.cursor) - state.cursor
     except ValueError as why:
         raise StructuredFieldError(
             "Binary Sequence didn't contain ending ':'",
