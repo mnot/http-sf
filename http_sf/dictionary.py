@@ -14,8 +14,10 @@ COMMA = ord(b",")
 def parse_dictionary(
     state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
 ) -> DictionaryType:
-    dictionary = {}
+    dictionary: DictionaryType = {}
     data_len = len(state.data)
+    if state.cursor == data_len:
+        return dictionary
     while True:
         this_key = parse_key(state)
         try:

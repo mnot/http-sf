@@ -95,7 +95,7 @@ def test_parse(test: dict) -> Tuple[bool, Any, Any]:
     if test.get("must_fail", False):
         test_success = not parse_success
     else:
-        test_success = test["expected"] == parsed
+        test_success = parse_success and test["expected"] == parsed
     return test_success, parsed, parse_fail_reason
 
 
