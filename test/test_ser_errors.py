@@ -4,6 +4,7 @@ import unittest
 from decimal import Decimal
 
 from http_sf import Token, ser
+from http_sf.compat import Dictionary, Item, List
 
 
 class TestSerErrors(unittest.TestCase):
@@ -41,6 +42,14 @@ class TestSerErrors(unittest.TestCase):
             ser({"a": (Token(""), {})})
         with self.assertRaises(ValueError):
             ser([(Token(""), {})])
+
+    def test_empty_token_via_compat(self):
+        with self.assertRaises(ValueError):
+            str(Item(Token("")))
+        with self.assertRaises(ValueError):
+            str(List([Token("")]))
+        with self.assertRaises(ValueError):
+            str(Dictionary({"a": Token("")}))
 
     def test_token_unchanged(self):
         self.assertEqual(ser(Token("a")), "a")
