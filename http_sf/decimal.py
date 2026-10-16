@@ -29,11 +29,11 @@ def parse_decimal(state: ParserState) -> Decimal:
 
 
 def ser_decimal(input_decimal: Union[Decimal, float]) -> str:
-    if isinstance(input_decimal, float):
-        input_decimal = Decimal(input_decimal)
-    if not isinstance(input_decimal, Decimal):
-        raise ValueError("decimal input is not decimal")
     with localcontext(_CONTEXT):
+        if isinstance(input_decimal, float):
+            input_decimal = Decimal(input_decimal)
+        if not isinstance(input_decimal, Decimal):
+            raise ValueError("decimal input is not decimal")
         input_decimal = round(input_decimal, FRAC_DIGITS)
         abs_decimal = input_decimal.copy_abs()
         integer_component_s = str(int(abs_decimal))
