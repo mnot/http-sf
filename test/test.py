@@ -92,7 +92,7 @@ def test_parse(test: dict) -> Union[bool, Any, str]:
     if test.get("must_fail", False):
         test_success = not parse_success
     else:
-        test_success = test["expected"] == structure
+        test_success = parse_success and test["expected"] == structure
     return test_success, structure, parse_fail_reason
 
 
