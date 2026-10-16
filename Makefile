@@ -10,6 +10,7 @@ test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_error_contract.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_byteseq.py
 
 $(TESTS) $(SER_TESTS):
 	git submodule update --init --recursive
