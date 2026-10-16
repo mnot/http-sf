@@ -18,6 +18,12 @@ def ser_decimal(input_decimal: Union[Decimal, float]) -> str:
         input_decimal = Decimal(input_decimal)
     if not isinstance(input_decimal, Decimal):
         raise ValueError("decimal input is not decimal")
+    if not input_decimal.is_finite():
+        raise ValueError(f"decimal is not finite: {input_decimal}")
+    if input_decimal and input_decimal.adjusted() >= INT_DIGITS:
+        raise ValueError(
+            f"decimal with oversize integer component: {input_decimal.adjusted() + 1} digits"
+        )
     input_decimal = round(input_decimal, FRAC_DIGITS)
     abs_decimal = input_decimal.copy_abs()
     integer_component_s = str(int(abs_decimal))
