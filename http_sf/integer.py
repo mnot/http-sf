@@ -110,5 +110,6 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
             position=state.cursor - 1,
             offending_char=None,
         )
-    output_float = Decimal(state.data[num_start : state.cursor].decode("ascii")) * _sign
-    return output_float
+    # Decimal() is exact whatever the ambient context; arithmetic isn't.
+    sign_start = num_start - 1 if _sign < 0 else num_start
+    return Decimal(state.data[sign_start : state.cursor].decode("ascii"))
