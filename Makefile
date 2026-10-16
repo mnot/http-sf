@@ -14,6 +14,7 @@ test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_ser_errors.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_date_timezone.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_byteseq.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_minor_errors.py
 
 $(TESTS) $(SER_TESTS):
 	git submodule update --init --recursive
