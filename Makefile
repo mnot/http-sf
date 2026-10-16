@@ -7,14 +7,14 @@ SER_TESTS=test/tests/serialisation-tests/*.json
 test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test.py $(TESTS) $(SER_TESTS)
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat_full.py $(TESTS) $(SER_TESTS)
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_error_contract.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_decimal_context.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_ser_errors.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_date_timezone.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_byteseq.py
-	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_minor_errors.py
+	@# Every other test/test_*.py is a self-contained script; new ones are picked up
+	@# automatically. test_compat_full.py takes the JSON files and test_perf.py is
+	@# the benchmark (see the perf target).
+	@for t in test/test_*.py; do \
+		case $$t in test/test_compat_full.py|test/test_perf.py) continue;; esac; \
+		echo "== $$t"; \
+		PYTHONPATH=.:$(VENV) $(VENV)/python $$t || exit 1; \
+	done
 
 $(TESTS) $(SER_TESTS):
 	git submodule update --init --recursive
