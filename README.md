@@ -73,7 +73,7 @@ Bare types are represented using the following Python types:
 * Tokens: `http_sf.Token` (a `UserString`)
 * Byte Sequences: `bytes`
 * Booleans: `bool`
-* Dates: `datetime.datetime`
+* Dates: `datetime.datetime` (parsed values are timezone-aware, in UTC; values to be serialised must be timezone-aware too, or `ser()` raises `ValueError`)
 * Display Strings: `http_sf.DisplayString` (a `UserString`)
 
 Inner Lists are represented as lists as well.

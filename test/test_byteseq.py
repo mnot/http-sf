@@ -1,0 +1,50 @@
+"""Byte Sequence parsing: behaviour at the edges, and linear cost."""
+
+import unittest
+
+from http_sf import StructuredFieldError, parse
+
+
+class TestByteSeq(unittest.TestCase):
+    def test_basic(self):
+        self.assertEqual(parse(b":aGVsbG8=:", tltype="item")[0], b"hello")
+        self.assertEqual(parse(b"::", tltype="item")[0], b"")
+
+    def test_unterminated(self):
+        for value in (b":aGVsbG8=", b":", b"a=:aGVsbG8="):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError) as ctx:
+                parse(value, tltype="dictionary" if value[:2] == b"a=" else "item")
+            self.assertEqual(ctx.exception.position, len(value))
+
+    def test_not_at_start(self):
+        self.assertEqual(
+            parse(b"a=:AA==:, b=:BB==:", tltype="dictionary"),
+            {"a": (b"\x00", {}), "b": (b"\x04", {})},
+        )
+
+    def test_disallowed_character_position(self):
+        with self.assertRaises(StructuredFieldError) as ctx:
+            parse(b"x, :aG.s:", tltype="list")
+        self.assertEqual(ctx.exception.position, 8)
+
+    def test_does_not_copy_remaining_input(self):
+        # Slicing the rest of the input for every Byte Sequence makes parsing
+        # quadratic; count the bytes sliced rather than timing it.
+        class CountingBytes(bytes):
+            sliced = 0
+
+            def __getitem__(self, key):  # type: ignore[no-untyped-def]
+                result = super().__getitem__(key)
+                if isinstance(key, slice):
+                    CountingBytes.sliced += len(result)
+                return result
+
+        data = CountingBytes(b",".join([b":AA==:"] * 4000))
+        parse(data, tltype="list")
+        # Linear: about half the input is copied (the base64 content). The
+        # quadratic version copies about 2000 times the input.
+        self.assertLess(CountingBytes.sliced, 2 * len(data))
+
+
+if __name__ == "__main__":
+    unittest.main()

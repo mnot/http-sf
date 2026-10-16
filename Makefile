@@ -10,6 +10,10 @@ test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_position.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_error_contract.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_decimal_context.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_ser_errors.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_date_timezone.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_byteseq.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_minor_errors.py
 
 $(TESTS) $(SER_TESTS):

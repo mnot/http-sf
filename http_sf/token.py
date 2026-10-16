@@ -19,7 +19,9 @@ def parse_token(state: ParserState) -> Token:
 
 
 def ser_token(token: Token) -> str:
-    if token and ord(str(token)[0]) not in TOKEN_START_CHARS:
+    if not token:
+        raise ValueError("Token is empty")
+    if ord(str(token)[0]) not in TOKEN_START_CHARS:
         raise ValueError("Token didn't start with legal character")
     if not all(ord(char) in TOKEN_CHARS for char in str(token)):
         raise ValueError("Token contains disallowed characters")
