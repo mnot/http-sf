@@ -63,7 +63,37 @@ def test_decimal_too_long():
     print("All Decimal too-long tests passed.")
 
 
+def test_decimal_too_long_at_end_of_input():
+    print("Testing overlong decimal at end of input raises StructuredFieldError...")
+
+    # 13 digits then a period as the last byte; used to raise IndexError, or
+    # (inside a parameter) to be silently accepted as a bare parameter.
+    cases = [
+        (b"1234567890123.", "item"),
+        (b"1234567890123.", "list"),
+        (b"1;a=1234567890123.", "item"),
+        (b"a;b=1111111111111.", "dictionary"),
+        (b"a=1;b=1234567890123.", "dictionary"),
+    ]
+    for value, tltype in cases:
+        try:
+            parse(value, tltype=tltype)
+            print(f"  {value!r} as {tltype}: FAIL (no exception raised)")
+            sys.exit(1)
+        except StructuredFieldError as e:
+            assert e.offending_char is None, e.offending_char
+            assert e.position == len(value), e.position
+            print(f"  {value!r} as {tltype}: OK")
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"  {value!r} as {tltype}: FAIL ({type(e).__name__}: {e})")
+            sys.exit(1)
+
+    print("All end-of-input decimal tests passed.")
+
+
 if __name__ == "__main__":
     test_date_out_of_range()
     print()
     test_decimal_too_long()
+    print()
+    test_decimal_too_long_at_end_of_input()
