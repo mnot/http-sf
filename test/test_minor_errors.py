@@ -1,8 +1,10 @@
 """Error reporting for unterminated Inner Lists, reprs, and the command line."""
 
+import os
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 from http_sf import DisplayString, StructuredFieldError, Token, parse
 
@@ -47,17 +49,23 @@ class TestRepr(unittest.TestCase):
 
 class TestCommandLine(unittest.TestCase):
     def run_cli(self, *args):
+        # Always exercise this checkout, not whatever http_sf is installed.
+        root = Path(__file__).resolve().parent.parent
+        env = dict(os.environ, PYTHONPATH=str(root))
         return subprocess.run(
             [sys.executable, "-m", "http_sf", *args],
             capture_output=True,
             text=True,
             check=False,
+            cwd=root,
+            env=env,
         )
 
     def test_unknown_field_name(self):
         result = self.run_cli("-n", "x-not-a-known-field", "a")
         self.assertEqual(result.returncode, 1)
         self.assertNotIn("Traceback", result.stderr)
+        self.assertIn("x-not-a-known-field", result.stderr)
 
     def test_known_field_name(self):
         result = self.run_cli("-n", "Cache-Control", "max-age=60")
