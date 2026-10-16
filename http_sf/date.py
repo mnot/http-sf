@@ -21,4 +21,6 @@ def parse_date(state: ParserState) -> datetime:
 
 
 def ser_date(inval: datetime) -> str:
+    if inval.tzinfo is None or inval.utcoffset() is None:
+        raise ValueError("Date must be timezone-aware")
     return f"@{int(inval.timestamp())}"
