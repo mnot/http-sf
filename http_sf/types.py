@@ -19,7 +19,7 @@ class DisplayString(UserString):
         self.data = seq
 
     def __repr__(self) -> str:
-        return f'Token("{self.data}")'
+        return f'DisplayString("{self.data}")'
 
 
 BareItemType: TypeAlias = Union[

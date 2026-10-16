@@ -68,7 +68,7 @@ try:
     else:
         field = parse(input_bytes, name=args.field_name)
     print(to_json(field, sort_keys=True, indent=4))
-except ValueError as why:
+except (ValueError, KeyError) as why:
     sys.stderr.write(f"VALUE: {input_string.strip()}\n")
     sys.stderr.write(f"FAIL: {why}\n")
     sys.exit(1)

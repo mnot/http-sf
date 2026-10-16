@@ -26,7 +26,15 @@ def parse_innerlist(
     params: ParamsType = {}
     while True:
         discard_ows(state)
-        if state.data[state.cursor] == PAREN_CLOSE:
+        try:
+            next_char = state.data[state.cursor]
+        except IndexError as why:
+            raise StructuredFieldError(
+                "End of inner list not found",
+                position=state.cursor,
+                offending_char=None,
+            ) from why
+        if next_char == PAREN_CLOSE:
             state.cursor += 1
             params = parse_params(state, on_duplicate_key)
             return (inner_list, params)
@@ -59,10 +67,11 @@ def parse_item_or_inner_list(
     state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None
 ) -> Union[ItemType, InnerListType]:
     try:
-        if state.data[state.cursor] == PAREN_OPEN:
-            return parse_innerlist(state, on_duplicate_key)
+        is_inner_list = state.data[state.cursor] == PAREN_OPEN
     except IndexError:
-        pass
+        is_inner_list = False
+    if is_inner_list:
+        return parse_innerlist(state, on_duplicate_key)
     return parse_item(state, on_duplicate_key)
 
 
