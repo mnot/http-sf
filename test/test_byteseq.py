@@ -1,6 +1,5 @@
-"""Byte Sequence parsing: behaviour at the edges, and linear scaling."""
+"""Byte Sequence parsing: behaviour at the edges, and linear cost."""
 
-import time
 import unittest
 
 from http_sf import StructuredFieldError, parse
@@ -28,18 +27,23 @@ class TestByteSeq(unittest.TestCase):
             parse(b"x, :aG.s:", tltype="list")
         self.assertEqual(ctx.exception.position, 8)
 
-    def test_scales_linearly(self):
-        def timed(count: int) -> float:
-            data = b",".join([b":AA==:"] * count)
-            start = time.perf_counter()
-            parse(data, tltype="list")
-            return time.perf_counter() - start
+    def test_does_not_copy_remaining_input(self):
+        # Slicing the rest of the input for every Byte Sequence makes parsing
+        # quadratic; count the bytes sliced rather than timing it.
+        class CountingBytes(bytes):
+            sliced = 0
 
-        timed(1000)  # warm up
-        small = min(timed(25000) for _ in range(3))
-        large = min(timed(100000) for _ in range(3))
-        # Linear is about 4x; copying the remaining input per item is about 16x.
-        self.assertLess(large / small, 9)
+            def __getitem__(self, key):  # type: ignore[no-untyped-def]
+                result = super().__getitem__(key)
+                if isinstance(key, slice):
+                    CountingBytes.sliced += len(result)
+                return result
+
+        data = CountingBytes(b",".join([b":AA==:"] * 4000))
+        parse(data, tltype="list")
+        # Linear: about half the input is copied (the base64 content). The
+        # quadratic version copies about 2000 times the input.
+        self.assertLess(CountingBytes.sliced, 2 * len(data))
 
 
 if __name__ == "__main__":
