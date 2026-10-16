@@ -12,6 +12,7 @@ test: $(TESTS) $(SER_TESTS) venv
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_compat.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_decimal_context.py
 	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_ser_errors.py
+	PYTHONPATH=.:$(VENV) $(VENV)/python test/test_date_timezone.py
 
 $(TESTS) $(SER_TESTS):
 	git submodule update --init --recursive
