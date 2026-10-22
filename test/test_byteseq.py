@@ -39,6 +39,20 @@ class TestByteSeq(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(StructuredFieldError):
                 parse(value, tltype="item")
 
+    def test_padding_run_limits(self):
+        # Padding is at most two characters, and needs data in front of it.
+        for value in (
+            b":AA===:",
+            b":AAAA====:",
+            b":aGVsbG8===:",
+            b":=:",
+            b":==:",
+            b":===:",
+            b":====:",
+        ):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError):
+                parse(value, tltype="item")
+
     def test_alphabet_still_enforced(self):
         for value in (
             b":aGVsbG8=!:",

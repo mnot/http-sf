@@ -29,7 +29,16 @@ def parse_byteseq(state: ParserState) -> bytes:
         )
     # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding, so
     # normalise it rather than requiring exactly what an encoder would emit.
+    # Padding is still only valid at the end, at most two characters long, and
+    # after at least one data character.
     unpadded = b64_content.rstrip(b"=")
+    pad_len = len(b64_content) - len(unpadded)
+    if pad_len > 2 or (pad_len and not unpadded):
+        raise StructuredFieldError(
+            "Binary Sequence failed to decode",
+            position=state.cursor - 1,
+            offending_char=None,
+        )
     padded = unpadded + b"=" * (-len(unpadded) % 4)
     try:
         binary_content = base64.b64decode(padded, validate=True)
