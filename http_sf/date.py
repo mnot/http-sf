@@ -7,9 +7,11 @@ from .util import datetime_from_timestamp
 
 def parse_date(state: ParserState) -> datetime:
     state.cursor += 1  # consume "@"
+    number_start = state.cursor
     value = parse_integer(state)
     if not isinstance(value, int):
-        state.fail("Non-integer Date")
+        # The "." is what made the number a Decimal.
+        state.fail("Non-integer Date", state.data.index(b".", number_start))
     try:
         date = datetime_from_timestamp(value)
     except OverflowError as why:
