@@ -72,6 +72,7 @@ class TestOffendingChar(unittest.TestCase):
                 (b'%"abc%a', "item", "Incomplete percent encoding", 6),
                 (b'%"abc%', "item", "Incomplete percent encoding", 6),
                 (b'%"%c3"', "item", "Invalid UTF-8", 5),
+                (b'%"%ff"', "item", "Invalid UTF-8", 2),
                 (
                     b'%"abc',
                     "item",
