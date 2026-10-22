@@ -83,8 +83,9 @@ _ser_fallbacks: Tuple[Tuple[type, Callable[[Any], str]], ...] = (
     (int, lambda item: ser_integer(int.__int__(item))),
     (str, lambda item: ser_string(str.__str__(item))),
     (float, lambda item: ser_decimal(float.__float__(item))),
-    # A full slice via bytes.__getitem__ yields an exact bytes copy; bytes()
-    # honours __bytes__, and memoryview() honours __buffer__.
+    # A full slice via bytes.__getitem__ yields an exact bytes copy whatever
+    # the subclass overrides. This avoids bytes(), which honours __bytes__, and
+    # memoryview(), which honours __buffer__ (Python 3.12 and later only).
     (bytes, lambda item: ser_byteseq(bytes.__getitem__(item, slice(None)))),
 )
 

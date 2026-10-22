@@ -1,4 +1,4 @@
-"""ser() accepts subclasses of int, str, float and bytes, serialising their underlying value."""
+"""ser() accepts int, str, float and bytes subclasses, using the underlying value."""
 
 import unittest
 from enum import Enum, IntEnum, IntFlag
@@ -63,6 +63,10 @@ class LyingBytes(bytes):
 
     def __len__(self) -> int:
         return 3
+
+    # Only consulted on Python 3.12 and later; inert before that.
+    def __buffer__(self, flags: int) -> memoryview:
+        return memoryview(b"lie")
 
 
 class PlainFloat(float):
