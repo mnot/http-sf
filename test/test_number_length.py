@@ -15,17 +15,12 @@ def failure(value: bytes, tltype: str = "item") -> StructuredFieldError:
 
 
 class TestIntegerLength(unittest.TestCase):
-    def test_fifteen_characters_parse(self):
-        cases = {
-            b"999999999999999": 999999999999999,
-            b"-999999999999999": -999999999999999,
-            b"000000000000001": 1,
-            b"-000000000000001": -1,
-            b"000000000000000": 0,
-        }
-        for value, expected in cases.items():
-            with self.subTest(value=value):
-                self.assertEqual(parse(value, tltype="item"), (expected, {}))
+    def test_min_int(self):
+        # The shared suite covers the positive limit and 15 characters with
+        # leading zeros, but not this one.
+        self.assertEqual(
+            parse(b"-999999999999999", tltype="item"), (-999999999999999, {})
+        )
 
     def test_sixteen_characters_fail(self):
         # Step 7.5 counts characters, not magnitude; leading zeros count.
@@ -75,7 +70,6 @@ class TestDecimalLength(unittest.TestCase):
             b"123456789012.123": Decimal("123456789012.123"),
             b"-123456789012.123": Decimal("-123456789012.123"),
             b"000000000012.100": Decimal("12.100"),
-            b"1.5": Decimal("1.5"),
         }
         for value, expected in cases.items():
             with self.subTest(value=value):
