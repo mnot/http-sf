@@ -1,6 +1,5 @@
 """Byte Sequence parsing: behaviour at the edges, and linear cost."""
 
-import base64
 import unittest
 
 from http_sf import StructuredFieldError, parse
@@ -15,7 +14,7 @@ class TestByteSeq(unittest.TestCase):
         # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding.
         for value, expected in (
             (b":aGVsbG8:", b"hello"),  # unpadded
-            (b":uuueGVsbG8=:", base64.b32decode("XLVZ4GK3DMNQ====")),  # partially padded
+            (b":uuueGVsbG8=:", b"\xba\xeb\x9e\x19[\x1b\x1b"),  # partially padded
             (b":aGVsbG8==:", b"hello"),  # extra padding
             (b":aGVsbG8=:", b"hello"),
             (b":AA:", b"\x00"),
@@ -24,6 +23,7 @@ class TestByteSeq(unittest.TestCase):
             (b":AAA:", b"\x00\x00"),
             (b":AAAA:", b"\x00\x00\x00"),
             (b":iZ==:", b"\x89"),  # non-zero pad bits
+            (b":iZ:", b"\x89"),  # non-zero pad bits, unpadded
         ):
             with self.subTest(value=value):
                 self.assertEqual(parse(value, tltype="item")[0], expected)
@@ -33,11 +33,19 @@ class TestByteSeq(unittest.TestCase):
             b":=aGVsbG8=:",  # padding at beginning
             b":a=GVsbG8=:",  # padding in middle
             b":aGVs=bG8=:",
-            b":aGVsbG8=!:",
-            b":aGVsbG8.:",
             b":a:",  # one leftover character can't encode a byte
             b":aGVsbG8aa:",  # likewise, after full groups
+        ):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError):
+                parse(value, tltype="item")
+
+    def test_alphabet_still_enforced(self):
+        for value in (
+            b":aGVsbG8=!:",
+            b":aGVsbG8.:",
             b":aGVsb G8=:",
+            b":aGVs\nbG8=:",  # line feed
+            b":aGVs\r\nbG8=:",
             b":_-Ah:",  # base64url alphabet
         ):
             with self.subTest(value=value), self.assertRaises(StructuredFieldError):
