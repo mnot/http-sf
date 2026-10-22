@@ -1,5 +1,6 @@
 """Errors that report the fault itself: Non-integer Date and Invalid UTF-8."""
 
+import itertools
 import unittest
 
 from http_sf import StructuredFieldError, parse
@@ -88,6 +89,22 @@ class TestNonIntegerDate(PositionTestCase):
             ]
         )
 
+    def test_period_before_the_date(self):
+        # Keys and Tokens can contain a ".", which isn't the one to report.
+        self.check(
+            [
+                (b"a.b=@1.5", "dictionary", self.MESSAGE, 6),
+                (b"*.a=@1.5", "dictionary", self.MESSAGE, 6),
+                (b"a.b=1, c.d=@12.5", "dictionary", self.MESSAGE, 14),
+                (b"a.b=1;c.d=@12.5", "dictionary", self.MESSAGE, 13),
+                (b"x.y;k.l=@12.5", "item", self.MESSAGE, 11),
+                (b"z, x.y;k.l=@12.5", "list", self.MESSAGE, 14),
+                (b"(x.y;k.l=@12.5)", "list", self.MESSAGE, 12),
+                (b"t.k, @1.5", "list", self.MESSAGE, 7),
+                (b"a.b, c.d;e.f=@-1.5", "list", self.MESSAGE, 16),
+            ]
+        )
+
     def test_context_is_kept(self):
         self.assertEqual(failure(b"a=1, b=@1.5", "dictionary").context, "b")
         self.assertEqual(failure(b"a;b=@1.5", "item").context, "b")
@@ -153,6 +170,43 @@ def esc(data: bytes) -> bytes:
 
 def display_string(*parts: bytes) -> bytes:
     return b'%"' + b"".join(parts) + b'"'
+
+
+def first_invalid_sequence(data: bytes):
+    """
+    Index of the first byte of the first invalid UTF-8 sequence in data, and
+    whether that sequence is valid so far but runs out of bytes. (None, False)
+    if data is valid. Hand-written from Unicode Table 3-7.
+    """
+    i = 0
+    while i < len(data):
+        lead = data[i]
+        if lead < 0x80:
+            i += 1
+            continue
+        if 0xC2 <= lead <= 0xDF:
+            ranges = [(0x80, 0xBF)]
+        elif lead == 0xE0:
+            ranges = [(0xA0, 0xBF), (0x80, 0xBF)]
+        elif 0xE1 <= lead <= 0xEC or lead in (0xEE, 0xEF):
+            ranges = [(0x80, 0xBF)] * 2
+        elif lead == 0xED:
+            ranges = [(0x80, 0x9F), (0x80, 0xBF)]
+        elif lead == 0xF0:
+            ranges = [(0x90, 0xBF), (0x80, 0xBF), (0x80, 0xBF)]
+        elif 0xF1 <= lead <= 0xF3:
+            ranges = [(0x80, 0xBF)] * 3
+        elif lead == 0xF4:
+            ranges = [(0x80, 0x8F), (0x80, 0xBF), (0x80, 0xBF)]
+        else:
+            return i, False
+        for offset, (low, high) in enumerate(ranges, 1):
+            if i + offset >= len(data):
+                return i, True
+            if not low <= data[i + offset] <= high:
+                return i, False
+        i += len(ranges) + 1
+    return None, False
 
 
 class TestInvalidUTF8(PositionTestCase):
@@ -268,23 +322,70 @@ class TestInvalidUTF8(PositionTestCase):
         self.fault(b"%e2%82a%ff", 2)
         self.fault(b"%c3%a9%c3%28%ff", 8)
 
-    def test_every_two_byte_pair(self):
-        for first in range(0x80, 0x100):
-            for second in range(0x100):
-                pair = bytes([first, second])
-                value = display_string(esc(pair))
-                try:
-                    pair.decode("utf-8")
-                except UnicodeDecodeError:
-                    why = failure(value, "item")
-                    cut_off = why.__cause__.reason == "unexpected end of data"
-                    self.assertEqual(
-                        (why.args[0], why.position),
-                        (self.MESSAGE, len(value) - 1 if cut_off else 2),
-                        pair,
-                    )
-                else:
-                    parse(value, tltype="item")
+    def expect_all(self, prefix, sequences):
+        """
+        Every sequence follows the prefix (a list of (bytes, escaped) pieces)
+        as escapes. The expected position comes from first_invalid_sequence
+        and from offsets noted while the input is built.
+        """
+        head = b""
+        decoded = b""
+        offsets = []
+        for piece, escaped in prefix:
+            for byte in piece:
+                offsets.append(2 + len(head))
+                head += b"%%%02x" % byte if escaped else bytes([byte])
+                decoded += bytes([byte])
+        for sequence in sequences:
+            value = display_string(head + esc(sequence))
+            bad, cut_off = first_invalid_sequence(decoded + sequence)
+            if bad is None:
+                parse(value, tltype="item")
+                continue
+            why = failure(value, "item")
+            if cut_off:
+                expected = len(value) - 1
+            elif bad < len(decoded):
+                expected = offsets[bad]
+            else:
+                expected = 2 + len(head) + 3 * (bad - len(decoded))
+            self.assertEqual(
+                (why.args[0], why.position), (self.MESSAGE, expected), value
+            )
+            self.assertEqual(why.offending_char, value[expected])
+
+    PREFIXES = (
+        [],
+        [(b"abc", False)],
+        [(b"a", True), (b"bc", False)],
+        [("\u00e9".encode(), True), (b"x", False), ("\u20ac".encode(), True)],
+        [(b"ab", False), ("\U0001f600".encode(), True), (b"%", True), (b"c", False)],
+    )
+
+    def test_every_two_byte_sequence_after_a_prefix(self):
+        pairs = [bytes([a, b]) for a in range(0x80, 0x100) for b in range(0x100)]
+        for prefix in self.PREFIXES:
+            with self.subTest(prefix=prefix):
+                self.expect_all(prefix, pairs)
+
+    def test_longer_sequences_after_a_prefix(self):
+        edges = [0x00, 0x41, 0x7F, 0x80, 0x8F, 0x90, 0x9F, 0xA0, 0xBF, 0xC0, 0xC2]
+        edges += [0xDF, 0xE0, 0xE1, 0xED, 0xEF, 0xF0, 0xF4, 0xF5, 0xFF]
+        sequences = [
+            bytes(combination)
+            for length in (3, 4)
+            for combination in itertools.product(edges, repeat=length)
+        ]
+        for prefix in self.PREFIXES[:1] + self.PREFIXES[3:4]:
+            with self.subTest(prefix=prefix):
+                self.expect_all(prefix, sequences)
+
+    def test_already_impossible_sequences_ending_at_the_quote(self):
+        # Reported where they start, unlike %c3 and %e2%82.
+        for content in (b"%ed%a0", b"%e0%80", b"%f0%80", b"%f4%90", b"%c0", b"%ff"):
+            with self.subTest(content=content):
+                self.fault(content, 2)
+                self.fault(b"ab" + content, 4)
 
     def test_contexts(self):
         self.check(

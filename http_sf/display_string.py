@@ -42,11 +42,18 @@ def parse_display_string(state: ParserState) -> DisplayString:
 
 def _utf8_error_position(state: ParserState, why: UnicodeDecodeError) -> int:
     """
-    Where the first bad sequence starts in the input. A sequence cut off by the
-    closing DQUOTE is reported there, as it always was.
+    Where the first bad sequence starts in the input. why indexes the decoded
+    bytes, so its start is mapped back through the escapes.
+
+    One case stays put: a sequence that is valid so far but runs out of bytes
+    at the closing DQUOTE (%c3, %e2%82) is reported at the DQUOTE. A sequence
+    that is already impossible (%ed%a0, %c0) is reported where it starts, as
+    is any other bad sequence.
     """
     closing = state.cursor - 1
-    if why.reason not in ("invalid start byte", "invalid continuation byte"):
+    # The decoder reports such a sequence as ending at the end of the bytes,
+    # starting with a lead byte (a lone %ff, %c0 or %f5 ends there too).
+    if why.end == len(why.object) and 0xC2 <= why.object[why.start] <= 0xF4:
         return closing
     # The content has no other DQUOTE, and an escape is three input bytes for
     # one decoded byte.
