@@ -42,23 +42,20 @@ def parse_display_string(state: ParserState) -> DisplayString:
 
 def _utf8_error_position(state: ParserState, why: UnicodeDecodeError) -> int:
     """
-    Where the first bad sequence starts in the input. why indexes the decoded
-    bytes, so its start is mapped back through the escapes.
+    Where the decoder first rejects a byte, mapped back to the input.
 
-    One case stays put: a sequence that is valid so far but runs out of bytes
-    at the closing DQUOTE (%c3, %e2%82) is reported at the DQUOTE. A sequence
-    that is already impossible (%ed%a0, %c0) is reported where it starts, as
-    is any other bad sequence.
+    That is the byte at why.start if it can't begin a sequence (%80, %c0, %ff).
+    Otherwise it is a lead byte, and the rejected byte is the one after the
+    valid part of the sequence (why.end): the 'a' in %c3a, the %80 in %e0%80.
+    If the string ends first (%c3), that's the closing DQUOTE.
     """
-    closing = state.cursor - 1
-    # The decoder reports such a sequence as ending at the end of the bytes,
-    # starting with a lead byte (a lone %ff, %c0 or %f5 ends there too).
-    if why.end == len(why.object) and 0xC2 <= why.object[why.start] <= 0xF4:
-        return closing
+    rejected = why.start
+    if 0xC2 <= why.object[why.start] <= 0xF4:
+        rejected = why.end
     # The content has no other DQUOTE, and an escape is three input bytes for
     # one decoded byte.
-    position = state.data.rfind(b'"', 0, closing) + 1
-    for _ in range(why.start):
+    position = state.data.rfind(b'"', 0, state.cursor - 1) + 1
+    for _ in range(rejected):
         position += 3 if state.data[position] == PERCENT else 1
     return position
 

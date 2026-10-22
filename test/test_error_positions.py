@@ -172,11 +172,12 @@ def display_string(*parts: bytes) -> bytes:
     return b'%"' + b"".join(parts) + b'"'
 
 
-def first_invalid_sequence(data: bytes):
+def first_rejected_byte(data: bytes):
     """
-    Index of the first byte of the first invalid UTF-8 sequence in data, and
-    whether that sequence is valid so far but runs out of bytes. (None, False)
-    if data is valid. Hand-written from Unicode Table 3-7.
+    Index of the first byte of data that UTF-8 rejects, or None if it's valid:
+    a byte that can't begin a sequence, or the byte after the valid part of a
+    sequence that can't continue it. len(data) if data ends in the middle of a
+    sequence. Hand-written from Unicode Table 3-7.
     """
     i = 0
     while i < len(data):
@@ -199,40 +200,44 @@ def first_invalid_sequence(data: bytes):
         elif lead == 0xF4:
             ranges = [(0x80, 0x8F), (0x80, 0xBF), (0x80, 0xBF)]
         else:
-            return i, False
+            return i
         for offset, (low, high) in enumerate(ranges, 1):
             if i + offset >= len(data):
-                return i, True
+                return len(data)
             if not low <= data[i + offset] <= high:
-                return i, False
+                return i + offset
         i += len(ranges) + 1
-    return None, False
+    return None
 
 
 class TestInvalidUTF8(PositionTestCase):
+    """The position is the first byte that UTF-8 rejects, as an input offset."""
+
     MESSAGE = "Invalid UTF-8"
 
-    def fault(self, content: bytes, position: int, **kwargs):
-        "content is already escaped; it follows %\" at 2."
+    def fault(self, content: bytes, position: int):
+        "content is already escaped; it follows the opening %\" at 2."
         value = display_string(content)
         self.check([(value, "item", self.MESSAGE, position)])
-        why = failure(value, "item")
-        self.assertEqual(why.offending_char, ord("%"))
-        self.assertIsInstance(why.__cause__, UnicodeDecodeError)
+        self.assertIsInstance(failure(value, "item").__cause__, UnicodeDecodeError)
 
     def cut_off(self, content: bytes):
-        "A sequence cut off by the closing DQUOTE is reported there."
+        "The string ends in the middle of a sequence: the closing DQUOTE."
         value = display_string(content)
         self.check([(value, "item", self.MESSAGE, len(value) - 1)])
         self.assertEqual(failure(value, "item").offending_char, ord('"'))
 
-    def test_single_bytes(self):
-        self.check(
-            [
-                (b'%"%ff"', "item", self.MESSAGE, 2),
-                (b'%"%80"', "item", self.MESSAGE, 2),
-            ]
-        )
+    def test_bytes_that_cannot_begin_a_sequence(self):
+        self.fault(b"%ff", 2)
+        self.fault(b"%fe", 2)
+        self.fault(b"%80", 2)  # continuation byte
+        self.fault(b"%bf", 2)
+        self.fault(b"%c0", 2)
+        self.fault(b"%c1%bf", 2)
+        self.fault(b"%f5%80%80%80", 2)
+        self.fault(b"%f8%88%80%80%80", 2)
+        self.fault(b"a%bf", 3)
+        self.fault(b"abc%f5", 5)
 
     def test_bad_byte_at_each_offset(self):
         for n in range(8):
@@ -245,26 +250,24 @@ class TestInvalidUTF8(PositionTestCase):
 
     def test_valid_multibyte_before(self):
         # Each escape is three input bytes, however many bytes the character has.
-        self.fault(esc("\u00e9".encode()) + b"%ff", 8)
-        self.fault(esc("\u20ac".encode()) + b"%ff", 11)
+        self.fault(esc("é".encode()) + b"%ff", 8)
+        self.fault(esc("€".encode()) + b"%ff", 11)
         self.fault(esc("\U0001f600".encode()) + b"%ff", 14)
-        self.fault(esc("\u00e9\u20ac\U0001f600".encode()) + b"%ff", 2 + 3 * 9)
-        self.fault(b"ab" + esc("\u00e9".encode()) + b"cd%e2%82a", 12)
+        self.fault(esc("é€\U0001f600".encode()) + b"%ff", 2 + 3 * 9)
+        self.fault(b"ab" + esc("é".encode()) + b"cd%e2%82a", 18)
 
     def test_lead_byte_followed_by_ascii(self):
-        # The sequence is cut short by a byte that can't continue it: the lead
-        # byte is reported, not the byte that interrupts it.
-        self.fault(b"%c3a", 2)
-        self.fault(b"%c3%61", 2)
-        self.fault(b"%e2a%ff", 2)
-        self.fault(b"%e2%82a", 2)
-        self.fault(b"%f0%9f%98a", 2)
-        self.fault(b"xy%c3a", 4)
-        self.fault(b"x%e2%82%61", 3)
+        # The byte that can't continue the sequence is the one reported.
+        self.fault(b"%c3a", 5)
+        self.fault(b"%c3%61", 5)
+        self.fault(b"%e2a%ff", 5)
+        self.fault(b"%e2%82a", 8)
+        self.fault(b"%f0%9f%98a", 11)
+        self.fault(b"xy%c3a", 7)
+        self.fault(b"x%e2%82%61", 9)
 
-    def test_truncated_at_the_end(self):
-        # Nothing is wrong until the closing DQUOTE ends the sequence early,
-        # so that's where it's reported (as before).
+    def test_cut_off_by_the_closing_quote(self):
+        # Valid so far; the closing DQUOTE is the byte that can't continue it.
         for content in (
             b"%c2",
             b"%e2",
@@ -273,60 +276,57 @@ class TestInvalidUTF8(PositionTestCase):
             b"%f0%9f",
             b"%f0%9f%98",
             b"abc%f0%9f%98",
-            esc("\u00e9".encode()) + b"%e2%82",
-            b"ab" + esc("\u00e9".encode()) + b"cd%e2%82",
+            esc("é".encode()) + b"%e2%82",
+            b"ab" + esc("é".encode()) + b"cd%e2%82",
         ):
             with self.subTest(content=content):
                 self.cut_off(content)
 
-    def test_truncated_sequence_is_not_the_first_fault(self):
-        # An earlier bad sequence is still reported where it starts.
-        self.fault(b"%ff%e2%82", 2)
-        self.fault(b"a%c3%28%e2%82", 3)
+    def test_impossible_sequences_at_the_end(self):
+        # The second byte is already wrong, so it, not the quote, is rejected.
+        for content in (b"%ed%a0", b"%e0%80", b"%f0%80", b"%f4%90"):
+            with self.subTest(content=content):
+                self.fault(content, 5)
+                self.fault(b"ab" + content, 7)
 
     def test_two_byte_sequences(self):
-        self.fault(b"%c3%28", 2)  # bad continuation
-        self.fault(b"%c3%c3", 2)
-        self.fault(b"%c3%ff", 2)
-        self.fault(b"%80", 2)  # lone continuation
-        self.fault(b"a%bf", 3)
-        self.fault(b"%c0%80", 2)  # overlong
-        self.fault(b"%c1%bf", 2)
-        self.fault(b"%c0%af", 2)
+        self.fault(b"%c3%28", 5)  # bad continuation
+        self.fault(b"%c3%c3", 5)
+        self.fault(b"%c3%ff", 5)
+        self.fault(b"%c3%28%ff", 5)
 
     def test_three_byte_sequences(self):
-        self.fault(b"%e2%28%a1", 2)  # bad second byte
-        self.fault(b"%e2%82%28", 2)  # bad third byte
-        self.fault(b"%e2%82%e2", 2)
-        self.fault(b"%e0%80%80", 2)  # overlong
-        self.fault(b"%e0%9f%bf", 2)
-        self.fault(b"%ed%a0%80", 2)  # surrogates
-        self.fault(b"%ed%bf%bf", 2)
-        self.fault(b"ab%ed%a0%80", 4)
+        self.fault(b"%e2%28%a1", 5)  # bad second byte
+        self.fault(b"%e2%82%28", 8)  # bad third byte
+        self.fault(b"%e2%82%e2", 8)
+        self.fault(b"%e0%80%80", 5)  # overlong
+        self.fault(b"%e0%9f%bf", 5)
+        self.fault(b"%ed%a0%80", 5)  # surrogates
+        self.fault(b"%ed%bf%bf", 5)
+        self.fault(b"ab%ed%a0%80", 7)
 
     def test_four_byte_sequences(self):
-        self.fault(b"%f0%28%8c%bc", 2)  # bad second byte
-        self.fault(b"%f0%90%28%bc", 2)  # bad third byte
-        self.fault(b"%f0%90%8c%28", 2)  # bad fourth byte
-        self.fault(b"%f0%80%80%80", 2)  # overlong
-        self.fault(b"%f0%8f%bf%bf", 2)
-        self.fault(b"%f4%90%80%80", 2)  # beyond U+10FFFF
-        self.fault(b"%f5%80%80%80", 2)
-        self.fault(b"%f8%88%80%80%80", 2)
-        self.fault(b"%fe", 2)
-        self.fault(b"abc%f4%90%80%80", 5)
+        self.fault(b"%f0%28%8c%bc", 5)  # bad second byte
+        self.fault(b"%f0%90%28%bc", 8)  # bad third byte
+        self.fault(b"%f0%90%8c%28", 11)  # bad fourth byte
+        self.fault(b"%f0%80%80%80", 5)  # overlong
+        self.fault(b"%f0%8f%bf%bf", 5)
+        self.fault(b"%f4%90%80%80", 5)  # beyond U+10FFFF
+        self.fault(b"abc%f4%90%80%80", 8)
 
     def test_first_fault_wins(self):
         self.fault(b"%ff%fe", 2)
         self.fault(b"a%80%ff", 3)
-        self.fault(b"%e2%82a%ff", 2)
-        self.fault(b"%c3%a9%c3%28%ff", 8)
+        self.fault(b"%e2%82a%ff", 8)
+        self.fault(b"%c3%a9%c3%28%ff", 11)
+        self.fault(b"%ff%e2%82", 2)
+        self.fault(b"a%c3%28%e2%82", 6)
 
     def expect_all(self, prefix, sequences):
         """
         Every sequence follows the prefix (a list of (bytes, escaped) pieces)
-        as escapes. The expected position comes from first_invalid_sequence
-        and from offsets noted while the input is built.
+        as escapes. The expected position comes from first_rejected_byte and
+        from offsets noted while the input is built.
         """
         head = b""
         decoded = b""
@@ -338,17 +338,15 @@ class TestInvalidUTF8(PositionTestCase):
                 decoded += bytes([byte])
         for sequence in sequences:
             value = display_string(head + esc(sequence))
-            bad, cut_off = first_invalid_sequence(decoded + sequence)
-            if bad is None:
+            rejected = first_rejected_byte(decoded + sequence)
+            if rejected is None:
                 parse(value, tltype="item")
                 continue
             why = failure(value, "item")
-            if cut_off:
-                expected = len(value) - 1
-            elif bad < len(decoded):
-                expected = offsets[bad]
+            if rejected < len(decoded):
+                expected = offsets[rejected]
             else:
-                expected = 2 + len(head) + 3 * (bad - len(decoded))
+                expected = 2 + len(head) + 3 * (rejected - len(decoded))
             self.assertEqual(
                 (why.args[0], why.position), (self.MESSAGE, expected), value
             )
@@ -358,7 +356,7 @@ class TestInvalidUTF8(PositionTestCase):
         [],
         [(b"abc", False)],
         [(b"a", True), (b"bc", False)],
-        [("\u00e9".encode(), True), (b"x", False), ("\u20ac".encode(), True)],
+        [("é".encode(), True), (b"x", False), ("€".encode(), True)],
         [(b"ab", False), ("\U0001f600".encode(), True), (b"%", True), (b"c", False)],
     )
 
@@ -380,25 +378,18 @@ class TestInvalidUTF8(PositionTestCase):
             with self.subTest(prefix=prefix):
                 self.expect_all(prefix, sequences)
 
-    def test_already_impossible_sequences_ending_at_the_quote(self):
-        # Reported where they start, unlike %c3 and %e2%82.
-        for content in (b"%ed%a0", b"%e0%80", b"%f0%80", b"%f4%90", b"%c0", b"%ff"):
-            with self.subTest(content=content):
-                self.fault(content, 2)
-                self.fault(b"ab" + content, 4)
-
     def test_contexts(self):
         self.check(
             [
                 (b'a, %"%ff"', "list", self.MESSAGE, 5),
                 (b'%"x", %"y%ff"', "list", self.MESSAGE, 9),
                 (b'(%"%ff")', "list", self.MESSAGE, 3),
-                (b'(1 %"%c3a")', "list", self.MESSAGE, 5),
+                (b'(1 %"%c3a")', "list", self.MESSAGE, 8),
                 (b'a=%"x%ff"', "dictionary", self.MESSAGE, 5),
-                (b'a=1, b=%"%e2%82x"', "dictionary", self.MESSAGE, 9),
+                (b'a=1, b=%"%e2%82x"', "dictionary", self.MESSAGE, 15),
                 (b'a=(1 %"%ff")', "dictionary", self.MESSAGE, 7),
-                (b'a;b=%"%c3x"', "item", self.MESSAGE, 6),
-                (b'a;b=1;c=%"%ed%a0%80", d', "list", self.MESSAGE, 10),
+                (b'a;b=%"%c3x"', "item", self.MESSAGE, 9),
+                (b'a;b=1;c=%"%ed%a0%80", d', "list", self.MESSAGE, 13),
                 (b'a=1;b=%"%ff"', "dictionary", self.MESSAGE, 8),
                 (b'(a;b=%"%ff")', "list", self.MESSAGE, 7),
             ]
@@ -423,19 +414,19 @@ class TestInvalidUTF8(PositionTestCase):
         state.cursor = 2
         with self.assertRaises(StructuredFieldError) as ctx:
             parse_display_string(state)
-        self.assertEqual(ctx.exception.position, 5)
-        self.assertEqual(ctx.exception.offending_char, ord("%"))
+        self.assertEqual(ctx.exception.position, 11)
+        self.assertEqual(ctx.exception.offending_char, ord("a"))
         self.assertEqual(state.cursor, 13)  # after the closing DQUOTE
 
     def test_valid_strings_parse(self):
         for content in (
-            esc("\u00e9".encode()),
-            esc("\u20ac".encode()),
+            esc("é".encode()),
+            esc("€".encode()),
             esc("\U0001f600".encode()),
-            esc("\ud7ff".encode()),
-            esc("\ue000".encode()),
+            esc("퟿".encode()),
+            esc("".encode()),
             esc("\U0010ffff".encode()),
-            b"abc" + esc("\u00e9".encode()) + b"def",
+            b"abc" + esc("é".encode()) + b"def",
         ):
             with self.subTest(content=content):
                 parse(display_string(content), tltype="item")
@@ -443,7 +434,12 @@ class TestInvalidUTF8(PositionTestCase):
     def test_other_errors_unchanged(self):
         self.check(
             [
-                (b'%"%ff', "item", "Reached end of input without finding a closing DQUOTE", 5),
+                (
+                    b'%"%ff',
+                    "item",
+                    "Reached end of input without finding a closing DQUOTE",
+                    5,
+                ),
                 (b'%"%FF"', "item", "Uppercase percent encoding", 3),
                 (b'%"%f"', "item", "Invalid percent encoding", 3),
                 (b'%"%ff%g', "item", "Incomplete percent encoding", 6),
