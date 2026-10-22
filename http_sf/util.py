@@ -82,13 +82,10 @@ def parse_key(state: ParserState) -> str:
 
 
 def ser_key(key: str) -> str:
-    # Reject non-str keys up front: validating by iteration would let a
-    # sequence of one-character strings through, to be formatted as its repr.
-    # Otherwise, use the underlying value of a str subclass, ignoring any
-    # __str__, __format__ or iteration overrides (e.g., on a str Enum), so that
-    # the result is an exact str. Plain str skips both checks, to keep the
-    # common case cheap; type() (not __class__) because a subclass can't
-    # override it.
+    # Reject non-str keys before any content checks. For a str subclass, use the
+    # underlying value, ignoring __str__/__format__/__iter__ overrides (e.g.,
+    # on a str Enum). Plain str skips both; type(), not __class__, because a
+    # subclass can't override it.
     if type(key) is not str:  # pylint: disable=unidiomatic-typecheck
         if not isinstance(key, str):
             raise TypeError(f"Key must be a str, not {type(key).__name__}")
