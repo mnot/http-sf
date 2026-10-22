@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "typing_extensions"
+    "typing_extensions>=4.6"
 ]
 
 [project.optional-dependencies]
