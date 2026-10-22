@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from http_sf import StructuredFieldError, parse
+from http_sf.boolean import parse_boolean
 from http_sf.state import ParserState
 
 SUITE = Path(__file__).resolve().parent / "tests"
@@ -32,27 +33,158 @@ class TestOffendingChar(unittest.TestCase):
                     self.assertIsNone(why.offending_char)
 
     def test_boolean(self):
+        # Reported at the byte after "?", where the value should be.
         self.check(
             [
-                (b"?x", "item", "No Boolean value found", 0),
-                (b"?", "item", "No Boolean value found", 0),
+                (b"?x", "item", "No Boolean value found", 1),
+                (b"?", "item", "No Boolean value found", 1),
+                (b"? ", "item", "No Boolean value found", 1),
+                (b"??", "item", "No Boolean value found", 1),
+                (b"?\xc3\xa9", "item", "No Boolean value found", 1),
+                (b"?\xff", "item", "No Boolean value found", 1),
+                (b"?2", "item", "No Boolean value found", 1),
+                (b"a, ?x", "list", "No Boolean value found", 4),
+                (b"a, ?", "list", "No Boolean value found", 4),
+                (b"(?x)", "list", "No Boolean value found", 2),
+                (b"(a ?)", "list", "No Boolean value found", 4),
+                (b"a=?x", "dictionary", "No Boolean value found", 3),
+                (b"a=1, b=?", "dictionary", "No Boolean value found", 8),
+                (b"a;b=?z", "item", "No Boolean value found", 5),
+                (b"a;b=?", "item", "No Boolean value found", 5),
+                (b"a=1;b=?x, c", "dictionary", "No Boolean value found", 7),
             ]
         )
 
+    def test_boolean_success_unchanged(self):
+        for value, expected in [(b"?1", True), (b"?0", False)]:
+            with self.subTest(value=value):
+                self.assertIs(parse(value, tltype="item")[0], expected)
+        self.assertEqual(
+            parse(b"a, ?1;b=?0", tltype="list"),
+            [("a", {}), (True, {"b": False})],
+        )
+
+    def test_boolean_direct_call(self):
+        state = ParserState(b"x?y")
+        state.cursor = 1
+        with self.assertRaises(StructuredFieldError) as ctx:
+            parse_boolean(state)
+        self.assertEqual(ctx.exception.position, 2)
+        self.assertEqual(ctx.exception.offending_char, ord("y"))
+        self.assertEqual(state.cursor, 1)
+
+    def test_boolean_context_and_cause(self):
+        # Only the position moved: the key context and the chained exception
+        # are as they were.
+        cases = [
+            (b"?x", "item", None, KeyError),
+            (b"?", "item", None, IndexError),
+            (b"a;b=?x", "item", "b", KeyError),
+            (b"a=?x", "dictionary", "a", KeyError),
+            (b"a=1, b=?", "dictionary", "b", IndexError),
+        ]
+        for value, tltype, context, cause in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertEqual(why.context, context)
+                self.assertIsInstance(why.__cause__, cause)
+                self.assertTrue(why.__suppress_context__)
+                self.assertIs(why.__context__, why.__cause__)
+
+    def test_byteseq_context_and_cause(self):
+        cases = [
+            (b":aG.s:", "item", None),
+            (b"a;b=:aG.s:", "item", "b"),
+            (b"a=:aG.s:", "dictionary", "a"),
+        ]
+        for value, tltype, context in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertEqual(why.context, context)
+                self.assertIsNone(why.__cause__)
+                self.assertFalse(why.__suppress_context__)
+                self.assertIsNone(why.__context__)
+
     def test_byteseq(self):
-        # These are reported at the closing ":".
+        # An alphabet error is reported at the first byte outside it. The
+        # others (padding, decoding, a missing ":") are about the value as a
+        # whole, and stay where they were.
         self.check(
             [
                 (
                     b":aGVs.G8=:",
                     "item",
                     "Binary Sequence contained disallowed character",
-                    9,
+                    5,
+                ),
+                (
+                    b":aGVsbG8$=:",
+                    "item",
+                    "Binary Sequence contained disallowed character",
+                    8,
                 ),
                 (b":=:", "item", "Binary Sequence failed to decode", 2),
                 (b":aGVsbG8===:", "item", "Binary Sequence failed to decode", 11),
                 (b":a:", "item", "Binary Sequence failed to decode", 2),
                 (b":aGVsbG8=", "item", "Binary Sequence didn't contain ending ':'", 9),
+            ]
+        )
+
+    def test_byteseq_first_disallowed_byte(self):
+        message = "Binary Sequence contained disallowed character"
+        self.check(
+            [
+                (b":.AAA:", "item", message, 1),  # first byte of the content
+                (b":AAA.:", "item", message, 4),  # last byte of the content
+                (b":A.A$A:", "item", message, 2),  # the first of several
+                (b":AAAA.AAA!:", "item", message, 5),
+                (b":AA\xc3\xa9AA:", "item", message, 3),  # multi-byte: its first byte
+                (b":AA\xffAA:", "item", message, 3),
+                # "=" is in the alphabet: skipped over, not reported
+                (b":a=G.:", "item", message, 4),
+                (b":==.:", "item", message, 3),
+                (b":aGVsbG8=!:", "item", message, 9),
+            ]
+        )
+
+    def test_byteseq_alphabet_edges(self):
+        # The bytes either side of each run in [A-Za-z0-9+/=].
+        message = "Binary Sequence contained disallowed character"
+        for char in b"@[`{,-.:;<>?\x00\x1f \x7f\x80_\t\n\r":
+            if char == ord(":"):
+                continue  # that's the delimiter
+            value = b":AA" + bytes([char]) + b"AA:"
+            with self.subTest(char=char):
+                self.check([(value, "item", message, 3)])
+        # A CRLF pair is reported at the CR, the first of the two.
+        self.check([(b":AA\r\nAA:", "item", message, 3)])
+        for char in b"AZaz09+/":
+            with self.subTest(allowed=char):
+                parse(b":AA" + bytes([char]) + b"A:", tltype="item")
+
+    def test_byteseq_padding_errors_not_moved(self):
+        message = "Binary Sequence failed to decode"
+        self.check(
+            [
+                (b":aGVsbG8===:", "item", message, 11),
+                (b":aGVs=bG8=:", "item", message, 10),
+                (b":a=GVsbG8=:", "item", message, 10),
+                (b":=aGVsbG8=:", "item", message, 10),
+                (b":AAAA====:", "item", message, 9),
+                (b":=:", "item", message, 2),
+            ]
+        )
+
+    def test_byteseq_in_context(self):
+        message = "Binary Sequence contained disallowed character"
+        self.check(
+            [
+                (b"x, :aG.s:", "list", message, 6),
+                (b"(:A.:)", "list", message, 3),
+                (b"a=:AA==:, b=:A.A:", "dictionary", message, 14),
+                (b"a;b=:A$:", "item", message, 6),
+                (b":AA==:;b=:A$:", "item", message, 11),
+                (b"a=:AA==:;b=:A$A:, c", "dictionary", message, 13),
             ]
         )
 
