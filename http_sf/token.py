@@ -1,3 +1,4 @@
+import re
 from string import ascii_letters, digits
 
 from http_sf.state import ParserState
@@ -5,16 +6,15 @@ from http_sf.types import Token
 
 TOKEN_START_CHARS = set((ascii_letters + "*").encode("ascii"))
 TOKEN_CHARS = set((ascii_letters + digits + ":/!#$%&'*+-.^_`|~").encode("ascii"))
+TOKEN_RE = re.compile(b"[" + re.escape(bytes(sorted(TOKEN_CHARS))) + b"]*")
 
 
 def parse_token(state: ParserState) -> Token:
     start_cursor = state.cursor
     state.cursor += 1  # consume start char
-    data_len = len(state.data)
-    while state.cursor < data_len:
-        if state.data[state.cursor] not in TOKEN_CHARS:
-            return Token(state.data[start_cursor : state.cursor].decode("ascii"))
-        state.cursor += 1
+    match = TOKEN_RE.match(state.data, state.cursor)  # consume tchars
+    assert match  # can't fail; the pattern accepts zero characters
+    state.cursor = match.end()
     return Token(state.data[start_cursor : state.cursor].decode("ascii"))
 
 
