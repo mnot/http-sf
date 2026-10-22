@@ -27,8 +27,12 @@ def parse_byteseq(state: ParserState) -> bytes:
             position=state.cursor - 1,
             offending_char=None,
         )
+    # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding, so
+    # normalise it rather than requiring exactly what an encoder would emit.
+    unpadded = b64_content.rstrip(b"=")
+    padded = unpadded + b"=" * (-len(unpadded) % 4)
     try:
-        binary_content = base64.b64decode(b64_content, validate=True)
+        binary_content = base64.b64decode(padded, validate=True)
     except binascii.Error as why:
         raise StructuredFieldError(
             "Binary Sequence failed to decode",
