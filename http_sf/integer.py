@@ -1,6 +1,6 @@
 from decimal import Decimal
 from string import digits
-from typing import Union, cast
+from typing import Union
 
 from .errors import StructuredFieldError
 from .state import ParserState
@@ -12,12 +12,10 @@ DIGITS = set(digits.encode("ascii"))
 NUMBER_START_CHARS = set((digits + "-").encode("ascii"))
 PERIOD = ord(b".")
 MINUS = ord(b"-")
-INTEGER = "integer"
-DECIMAL = "decimal"
 
 
-def parse_integer(state: ParserState) -> int:
-    return cast(int, parse_number(state))
+def parse_integer(state: ParserState) -> Union[int, Decimal]:
+    return parse_number(state)
 
 
 def ser_integer(inval: int) -> str:
@@ -31,87 +29,70 @@ def ser_integer(inval: int) -> str:
 
 
 def parse_number(state: ParserState) -> Union[int, Decimal]:
-    _type = INTEGER
-    _sign = 1
-    num_start = state.cursor
-    decimal_index = 0
-    num_length = 0
-    if state.has_data() and state.data[state.cursor] == MINUS:
+    # Step numbers are those of RFC 9651 section 4.2.4.
+    is_decimal = False  # 1. type is "integer" or "decimal"
+    sign = 1  # 2.
+    # 3. input_number is data[number_start:cursor]
+    if state.has_data() and state.data[state.cursor] == MINUS:  # 4.
         state.cursor += 1
-        num_start += 1
-        _sign = -1
-    if not state.has_data():
+        sign = -1
+    if not state.has_data():  # 5.
         raise StructuredFieldError(
             "Number input lacked a number", position=state.cursor, offending_char=None
         )
-    if not state.data[state.cursor] in DIGITS:
+    if state.data[state.cursor] not in DIGITS:  # 6.
         raise StructuredFieldError(
             "Number doesn't start with a DIGIT",
             position=state.cursor,
             offending_char=state.data[state.cursor],
         )
-    while True:
-        try:
-            char = state.data[state.cursor]
-        except IndexError:
-            break
-        num_length = state.cursor - num_start
-        if char in DIGITS:
-            pass
-        elif _type is INTEGER and char == PERIOD:
-            # spec says 12, but character is appended afterwards
-            if num_length > 13:
-                raise StructuredFieldError(
-                    "Decimal too long.", position=state.cursor, offending_char=None
-                )
+    number_start = state.cursor
+    decimal_index = 0
+    while state.has_data():  # 7.
+        char = state.data[state.cursor]  # 7.1. consume
         state.cursor += 1
-        num_length = state.cursor - num_start - 1
-        if char in DIGITS:
+        if char in DIGITS:  # 7.2.
             pass
-        elif _type is INTEGER and char == PERIOD:
-            if num_length > 12:
+        elif not is_decimal and char == PERIOD:  # 7.3.
+            if state.cursor - number_start - 1 > 12:  # 7.3.1. before appending "."
                 raise StructuredFieldError(
-                    "Decimal too long.",
-                    position=state.cursor,
-                    offending_char=(
-                        state.data[state.cursor] if state.has_data() else None
-                    ),
+                    "Decimal too long.", position=state.cursor - 1, offending_char=None
                 )
-            _type = DECIMAL
+            is_decimal = True  # 7.3.2.
             decimal_index = state.cursor
-        else:
+        else:  # 7.4. prepend char to input_string
             state.cursor -= 1
-            num_length -= 1
             break
-    if _type == INTEGER:
-        if num_length > 15:
-            # We don't have usage position here as the cursor is already moved
+        input_length = state.cursor - number_start
+        if not is_decimal and input_length > 15:  # 7.5.
             raise StructuredFieldError(
                 "Integer too long.", position=state.cursor - 1, offending_char=None
             )
-        output_int = int(state.data[num_start : state.cursor]) * _sign
-        if not MIN_INT <= output_int <= MAX_INT:
+        if is_decimal and input_length > 16:  # 7.6.
             raise StructuredFieldError(
-                "Integer outside allowed range",
+                "Decimal too long.", position=state.cursor - 1, offending_char=None
+            )
+    output_number: Union[int, Decimal]
+    if not is_decimal:  # 8.
+        output_number = int(state.data[number_start : state.cursor])  # 8.1.
+    else:  # 9.
+        if state.data[state.cursor - 1] == PERIOD:  # 9.1.
+            raise StructuredFieldError(
+                "Decimal ends in '.'", position=state.cursor - 1, offending_char=None
+            )
+        if state.cursor - decimal_index > 3:  # 9.2.
+            raise StructuredFieldError(
+                "Decimal fractional component too long",
                 position=state.cursor - 1,
                 offending_char=None,
             )
-        return output_int
-    # Decimal
-    if num_length > 16:
-        raise StructuredFieldError(
-            "Decimal too long.", position=state.cursor - 1, offending_char=None
+        output_number = Decimal(  # 9.3.
+            state.data[number_start : state.cursor].decode("ascii")
         )
-    if state.data[state.cursor - 1] == PERIOD:
-        raise StructuredFieldError(
-            "Decimal ends in '.'", position=state.cursor - 1, offending_char=None
-        )
-    if state.cursor - decimal_index > 3:
-        raise StructuredFieldError(
-            "Decimal fractional component too long",
-            position=state.cursor - 1,
-            offending_char=None,
-        )
-    # Decimal() is exact whatever the ambient context; arithmetic isn't.
-    sign_start = num_start - 1 if _sign < 0 else num_start
-    return Decimal(state.data[sign_start : state.cursor].decode("ascii"))
+    if sign < 0:  # 10. Multiplying or negating a Decimal rounds to the ambient
+        # context; copy_negate() is exact.
+        if isinstance(output_number, Decimal):
+            output_number = output_number.copy_negate()
+        else:
+            output_number = -output_number
+    return output_number  # 11.

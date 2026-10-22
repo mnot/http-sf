@@ -82,7 +82,8 @@ def test_decimal_too_long_at_end_of_input():
             sys.exit(1)
         except StructuredFieldError as e:
             assert e.offending_char is None, e.offending_char
-            assert e.position == len(value), e.position
+            # RFC 9651 4.2.4 step 7.3.1 fails on the "." itself, the last byte.
+            assert e.position == len(value) - 1, e.position
             print(f"  {value!r} as {tltype}: OK")
         except Exception as e:  # pylint: disable=broad-except
             print(f"  {value!r} as {tltype}: FAIL ({type(e).__name__}: {e})")
