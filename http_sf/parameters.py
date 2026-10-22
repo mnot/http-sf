@@ -6,7 +6,6 @@ from .state import ParserState
 from .types import BareItemType, OnDuplicateKeyType, ParamsType
 from .util import discard_ows, parse_key, ser_key
 
-PAREN_OPEN = ord(b"(")
 SEMICOLON = ord(b";")
 EQUALS = ord(b"=")
 

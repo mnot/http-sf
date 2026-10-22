@@ -30,16 +30,12 @@ for c in NUMBER_START_CHARS:
 
 def parse_bare_item(state: ParserState) -> BareItemType:
     if not state.has_data():
-        try:
-            char = state.data[state.cursor]
-        except IndexError:
-            char = None
         raise StructuredFieldError(
-            "Empty item", position=state.cursor, offending_char=char
+            "Empty item", position=state.cursor, offending_char=None
         )
+    next_char = state.data[state.cursor]
     try:
-        next_char = state.data[state.cursor]
-        return _parse_map[next_char](state)
+        parser = _parse_map[next_char]
     except KeyError as why:
         if next_char == ord(b"'"):
             raise StructuredFieldError(
@@ -58,6 +54,7 @@ def parse_bare_item(state: ParserState) -> BareItemType:
             position=state.cursor,
             offending_char=next_char,
         ) from why
+    return parser(state)
 
 
 _ser_map: Dict[Type[Any], Callable[[Any], str]] = {
