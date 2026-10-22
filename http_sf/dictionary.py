@@ -44,7 +44,7 @@ def parse_dictionary(
             if not is_equals:
                 offending_char = state.data[state.cursor]
                 raise StructuredFieldError(
-                    f"'{this_key}' should be followed by '=', not '{chr(offending_char)}'",
+                    f"'{this_key}' should be followed by '=', not {chr(offending_char)!r}",
                     position=state.cursor,
                     offending_char=offending_char,
                 )
@@ -68,8 +68,7 @@ def ser_dictionary(dictionary: DictionaryType) -> str:
         raise ValueError("No contents; field should not be emitted")
     return ", ".join(
         [
-            f"{ser_key(m)}"
-            f"""{ser_params(n[1]) if
+            f"{ser_key(m)}" f"""{ser_params(n[1]) if
                 (isinstance(n, tuple) and n[0] is True)
                 else f'={ser_item_or_inner_list(cast(ItemType, n))}'}"""
             for m, n in dictionary.items()

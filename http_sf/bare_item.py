@@ -54,7 +54,7 @@ def parse_bare_item(state: ParserState) -> BareItemType:
                 offending_char=next_char,
             ) from why
         raise StructuredFieldError(
-            f"There is no Structured Field item starting with '{chr(next_char)}'",
+            f"There is no Structured Field item starting with {chr(next_char)!r}",
             position=state.cursor,
             offending_char=next_char,
         ) from why
