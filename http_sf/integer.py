@@ -56,11 +56,7 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
         elif not is_decimal and char == PERIOD:  # 7.3.
             if state.cursor - number_start - 1 > 12:  # 7.3.1. before appending "."
                 raise StructuredFieldError(
-                    "Decimal too long.",
-                    position=state.cursor,
-                    offending_char=(
-                        state.data[state.cursor] if state.has_data() else None
-                    ),
+                    "Decimal too long.", position=state.cursor - 1, offending_char=None
                 )
             is_decimal = True  # 7.3.2.
             decimal_index = state.cursor

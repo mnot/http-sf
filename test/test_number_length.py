@@ -82,16 +82,18 @@ class TestDecimalLength(unittest.TestCase):
 
     def test_integer_component_too_long(self):
         # Step 7.3.1: more than 12 characters before the ".".
-        # Reported just after the ".", at the character that follows it.
-        for value in [b"1234567890123.1", b"12345678901234.1", b"0000000000000.1"]:
+        # Reported at the ".", the character just consumed.
+        for value in [
+            b"1234567890123.1",
+            b"12345678901234.1",
+            b"0000000000000.1",
+            b"1234567890123.",
+        ]:
             with self.subTest(value=value):
                 why = failure(value)
                 self.assertEqual(why.args[0], "Decimal too long.")
-                self.assertEqual(why.position, value.index(b".") + 1)
-                self.assertEqual(why.offending_char, ord("1"))
-        why = failure(b"1234567890123.")
-        self.assertEqual(why.position, 14)
-        self.assertIsNone(why.offending_char)
+                self.assertEqual(why.position, value.index(b"."))
+                self.assertIsNone(why.offending_char)
 
     def test_sixteen_digits_then_period(self):
         # Step 7.5 fires on the 16th digit, before the "." is reached.
