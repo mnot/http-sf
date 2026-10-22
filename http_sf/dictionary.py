@@ -68,7 +68,8 @@ def ser_dictionary(dictionary: DictionaryType) -> str:
         raise ValueError("No contents; field should not be emitted")
     return ", ".join(
         [
-            f"{ser_key(m)}" f"""{ser_params(n[1]) if
+            f"{ser_key(m)}"
+            f"""{ser_params(n[1]) if
                 (isinstance(n, tuple) and n[0] is True)
                 else f'={ser_item_or_inner_list(cast(ItemType, n))}'}"""
             for m, n in dictionary.items()
