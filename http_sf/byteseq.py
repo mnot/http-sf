@@ -16,10 +16,14 @@ def parse_byteseq(state: ParserState) -> bytes:
         state.fail(
             "Binary Sequence didn't contain ending ':'", len(state.data), cause=why
         )
-    b64_content = state.data[state.cursor : state.cursor + end_delimit]
+    start = state.cursor
+    b64_content = state.data[start : start + end_delimit]
     state.cursor += end_delimit + 1
     if not all(c in B64CONTENT for c in b64_content):
-        state.fail("Binary Sequence contained disallowed character", state.cursor - 1)
+        # Report the first byte outside the alphabet ('=' is in it; where
+        # padding may appear is checked below).
+        bad = next(i for i, c in enumerate(b64_content) if c not in B64CONTENT)
+        state.fail("Binary Sequence contained disallowed character", start + bad)
     # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding, so
     # normalise it rather than requiring exactly what an encoder would emit.
     # Padding is still only valid at the end, at most two characters long, and
