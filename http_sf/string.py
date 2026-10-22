@@ -31,7 +31,7 @@ def parse_string(state: ParserState) -> str:
             state.cursor += 1
             if next_char not in DQUOTEBACKSLASH:
                 raise StructuredFieldError(
-                    f"Backslash before disallowed character '{chr(next_char)}'",
+                    f"Backslash before disallowed character {chr(next_char)!r}",
                     position=state.cursor - 1,
                     offending_char=next_char,
                 )

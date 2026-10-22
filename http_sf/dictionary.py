@@ -44,7 +44,7 @@ def parse_dictionary(
             if not is_equals:
                 offending_char = state.data[state.cursor]
                 raise StructuredFieldError(
-                    f"'{this_key}' should be followed by '=', not '{chr(offending_char)}'",
+                    f"'{this_key}' should be followed by '=', not {chr(offending_char)!r}",
                     position=state.cursor,
                     offending_char=offending_char,
                 )
