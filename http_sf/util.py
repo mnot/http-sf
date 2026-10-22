@@ -28,13 +28,15 @@ def datetime_from_timestamp(value: Union[int, float]) -> datetime:
 
 def discard_ows(state: ParserState) -> None:
     "Consume space characters at the beginning of data."
-    while state.has_data() and state.data[state.cursor] == SPACE:
+    size = len(state.data)
+    while state.cursor < size and state.data[state.cursor] == SPACE:
         state.cursor += 1
 
 
 def discard_http_ows(state: ParserState) -> None:
     "Consume space or HTAB characters at the beginning of data."
-    while state.has_data() and state.data[state.cursor] in HTTP_OWS:
+    size = len(state.data)
+    while state.cursor < size and state.data[state.cursor] in HTTP_OWS:
         state.cursor += 1
 
 
@@ -45,18 +47,19 @@ COMPAT = False
 
 
 def parse_key(state: ParserState) -> str:
-    if not state.has_data() or state.data[state.cursor] not in KEY_START_CHARS:
-        if not state.has_data() or not (
+    size = len(state.data)
+    if state.cursor >= size or state.data[state.cursor] not in KEY_START_CHARS:
+        if state.cursor >= size or not (
             COMPAT and state.data[state.cursor] in UPPER_CHARS
         ):
             if re.match(b"^[ \t;,]*$", state.data[state.cursor :]):
                 state.fail("Trailing delimiter")
-            if state.has_data() and state.data[state.cursor] in UPPER_CHARS:
+            if state.cursor < size and state.data[state.cursor] in UPPER_CHARS:
                 state.fail("Key cannot begin with an uppercase character")
             state.fail("Key does not begin with lcalpha or *")
     start_cursor = state.cursor
     state.cursor += 1
-    while state.has_data():
+    while state.cursor < size:
         if state.data[state.cursor] not in KEY_CHARS:
             if not (COMPAT and state.data[state.cursor] in UPPER_CHARS):
                 return state.data[start_cursor : state.cursor].decode("ascii").lower()

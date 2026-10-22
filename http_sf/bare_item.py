@@ -28,7 +28,7 @@ for c in NUMBER_START_CHARS:
 
 
 def parse_bare_item(state: ParserState) -> BareItemType:
-    if not state.has_data():
+    if state.cursor >= len(state.data):
         state.fail("Empty item")
     next_char = state.data[state.cursor]
     parser = _parse_map.get(next_char)

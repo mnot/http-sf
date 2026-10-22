@@ -7,7 +7,7 @@ DQUOTE = ord('"')
 
 def parse_display_string(state: ParserState) -> DisplayString:
     output_array = bytearray([])
-    if not state.has_data() or state.data[state.cursor : state.cursor + 2] != b'%"':
+    if state.data[state.cursor : state.cursor + 2] != b'%"':
         state.fail('Display string does not start with %"')
     state.cursor += 2  # consume PERCENT DQUOTE
     while True:

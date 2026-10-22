@@ -100,7 +100,7 @@ def parse(
         else:
             raise KeyError("unrecognised top-level type")
         discard_ows(state)
-        if state.has_data():
+        if state.cursor < len(data):
             state.fail("Trailing characters after value (missing comma?)")
         return structure
     except StructuredFieldError as why:
