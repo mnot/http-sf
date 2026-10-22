@@ -95,7 +95,7 @@ def to_json(structure: StructuredType, **args: Any) -> str:
     return json.dumps(structure, default=json_dump, **args)
 
 
-def from_json(instr: str) -> StructuredType:
+def from_json(instr: str) -> list[JsonDict]:
     raw_suite = json.loads(instr, parse_float=Decimal, object_hook=json_load)
     suite = []
     for test in raw_suite:
