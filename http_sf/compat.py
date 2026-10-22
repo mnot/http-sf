@@ -154,8 +154,9 @@ class InnerList(UserList):  # type: ignore[type-arg]
 
     # UserList rebuilds results with self.__class__(...), which would drop
     # params. Results carry a copy of this list's params; items are shared, as
-    # with copy.copy. For `a + b` the left operand's params win; `[3] + il`
-    # takes il's, being the only InnerList involved.
+    # with copy.copy, which copy() delegates to. For `a + b` the left
+    # operand's params win; `[3] + il` takes il's, being the only InnerList
+    # involved. Slices deliberately still drop params.
 
     def _derive(self, values: Iterable[AllItemType]) -> "InnerList":
         result = self.__class__(values)
@@ -168,7 +169,7 @@ class InnerList(UserList):  # type: ignore[type-arg]
         return result
 
     def copy(self) -> "InnerList":
-        return self._derive(self.data)
+        return copy.copy(self)
 
     def __add__(self, other: Iterable[AllItemType]) -> "InnerList":
         return self._derive(self.data + list(other))

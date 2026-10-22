@@ -1,7 +1,9 @@
 """InnerList copy, +, and * keep the list's parameters."""
 
 import copy
+import pickle
 import unittest
+from typing import Dict
 
 from http_sf.compat import InnerList, Item, Parameters
 
@@ -13,7 +15,7 @@ def make() -> InnerList:
 
 
 class TestInnerListParams(unittest.TestCase):
-    def check_params(self, result: InnerList, expected: dict) -> None:
+    def check_params(self, result: InnerList, expected: Dict[str, int]) -> None:
         self.assertIsInstance(result, InnerList)
         self.assertEqual(dict(result.params), expected)
         self.assertIsInstance(result.params, Parameters)
@@ -56,7 +58,8 @@ class TestInnerListParams(unittest.TestCase):
             for member in result:
                 self.assertIsInstance(member, Item)
 
-    def test_params_are_copied_not_shared(self):
+    def test_params_mapping_not_shared_but_members_are(self):
+        """The copy is shallow: members are shared, the params mapping isn't."""
         il = make()
         results = [
             il.copy(),
@@ -69,7 +72,49 @@ class TestInnerListParams(unittest.TestCase):
         for result in results:
             self.assertIsNot(result.params, il.params)
             result.params["z"] = 9
+            self.assertTrue(any(member is il[0] for member in result))
         self.assertEqual(dict(il.params), {"a": 1})
+
+    def test_slices_drop_params(self):
+        # Deliberate: a slice is a different list, not a copy of this one.
+        il = make()
+        for sliced in (il[0:2], il[:], il[::-1]):
+            self.assertIsInstance(sliced, InnerList)
+            self.assertEqual(dict(sliced.params), {})
+
+    def test_deepcopy_keeps_params(self):
+        il = make()
+        result = copy.deepcopy(il)
+        self.assertEqual(str(result), "(1 2);a=1")
+        self.assertIsNot(result.params, il.params)
+
+    def test_pickle_keeps_params(self):
+        result = pickle.loads(pickle.dumps(make()))
+        self.assertEqual(str(result), "(1 2);a=1")
+
+    def test_subclass_extra_attribute_agrees_with_copy_copy(self):
+        class Extra(InnerList):
+            def __init__(self, values=None, extra="default"):
+                super().__init__(values)
+                self.extra = extra
+
+        il = Extra([1], extra="original")
+        il.params["a"] = 1
+        for result in (il.copy(), copy.copy(il)):
+            self.assertIsInstance(result, Extra)
+            self.assertEqual(result.extra, "original")
+            self.assertEqual(dict(result.params), {"a": 1})
+
+    def test_subclass_with_required_arguments_copies(self):
+        class Required(InnerList):
+            def __init__(self, first, second):
+                super().__init__([first, second])
+
+        il = Required(1, 2)
+        il.params["a"] = 1
+        for result in (il.copy(), copy.copy(il)):
+            self.assertIsInstance(result, Required)
+            self.assertEqual(str(result), "(1 2);a=1")
 
     def test_original_unchanged(self):
         il = make()
