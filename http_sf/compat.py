@@ -7,6 +7,7 @@ Allows existing http_sfv users to migrate by changing only their imports:
     from http_sf.compat import Dictionary, List, Item, InnerList, Token, DisplayString
 """
 
+import copy
 from collections import UserDict, UserList
 from typing import (
     Any,
@@ -150,6 +151,35 @@ class InnerList(UserList):  # type: ignore[type-arg]
     def __iadd__(self, other: Any) -> "InnerList":  # type: ignore[misc]
         self.extend(other)
         return self
+
+    # UserList rebuilds results with self.__class__(...), which would drop
+    # params. Results carry a copy of this list's params; items are shared, as
+    # with copy.copy. For `a + b` the left operand's params win; `[3] + il`
+    # takes il's, being the only InnerList involved.
+
+    def _derive(self, values: Iterable[AllItemType]) -> "InnerList":
+        result = self.__class__(values)
+        result.params = copy.copy(self.params)
+        return result
+
+    def __copy__(self) -> "InnerList":
+        result: "InnerList" = UserList.__copy__(self)
+        result.params = copy.copy(self.params)
+        return result
+
+    def copy(self) -> "InnerList":
+        return self._derive(self.data)
+
+    def __add__(self, other: Iterable[AllItemType]) -> "InnerList":
+        return self._derive(self.data + list(other))
+
+    def __radd__(self, other: Iterable[AllItemType]) -> "InnerList":
+        return self._derive(list(other) + self.data)
+
+    def __mul__(self, n: int) -> "InnerList":
+        return self._derive(self.data * n)
+
+    __rmul__ = __mul__
 
 
 class Dictionary(UserDict):  # type: ignore[type-arg]
