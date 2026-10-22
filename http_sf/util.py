@@ -82,6 +82,13 @@ def parse_key(state: ParserState) -> str:
 
 
 def ser_key(key: str) -> str:
+    # Use the underlying value of a str subclass, ignoring any __str__,
+    # __format__ or iteration overrides (e.g., on a str Enum), so that the
+    # result is an exact str. Plain str skips this, to keep the common case
+    # cheap; type() (not __class__) because a subclass can't override it.
+    is_plain_str = type(key) is str  # pylint: disable=unidiomatic-typecheck
+    if not is_plain_str and isinstance(key, str):
+        key = str.__str__(key)
     if len(key) == 0:
         raise ValueError("Zero length key")
     if not all(ord(char) in KEY_CHARS for char in key):
