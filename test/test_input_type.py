@@ -34,6 +34,31 @@ class TestInputType(unittest.TestCase):
                 with self.assertRaises(TypeError):
                     parse(value, tltype="item")  # type: ignore[arg-type]
 
+    def test_encode_hint_only_for_str(self):
+        with self.assertRaises(TypeError) as ctx:
+            parse(None, tltype="item")  # type: ignore[arg-type]
+        self.assertNotIn(".encode()", str(ctx.exception))
+        self.assertIn("NoneType", str(ctx.exception))
+
+    def test_bytes_subclass(self):
+        class MyBytes(bytes):
+            pass
+
+        self.assertEqual(
+            parse(MyBytes(b"a=1"), tltype="dictionary"),
+            parse(b"a=1", tltype="dictionary"),
+        )
+
+    def test_str_with_name(self):
+        with self.assertRaises(TypeError):
+            parse("gzip, br", name="Accept-Encoding")  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            parse("a", name="zzz-unknown")  # type: ignore[arg-type]
+        self.assertEqual(
+            parse(memoryview(b"gzip, br"), name="Accept-Encoding"),
+            parse(b"gzip, br", name="Accept-Encoding"),
+        )
+
     def test_checked_before_tltype(self):
         with self.assertRaises(TypeError):
             parse("a", tltype="bogus")  # type: ignore[arg-type]
