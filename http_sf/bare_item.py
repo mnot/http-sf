@@ -70,11 +70,11 @@ _ser_map: Dict[Type[Any], Callable[[Any], str]] = {
 
 
 # Checked in order when the exact-type lookup misses. Token and DisplayString
-# (and the other types here) must stay ahead of the int and str entries so
-# that nothing is shadowed. bool can't be subclassed, so the exact lookup has
-# always handled it. Subclasses of int and str (IntEnum, str Enums, ...) are
-# serialised from their underlying value, ignoring any __int__ or __str__
-# override.
+# (and the other types here) must stay ahead of the int, str, float and bytes
+# entries so that nothing is shadowed. bool can't be subclassed, so the exact
+# lookup has always handled it. Subclasses of int, str, float and bytes
+# (IntEnum, str Enums, numpy.float64, ...) are serialised from their underlying
+# value, ignoring any __int__, __str__, __float__ or __bytes__ override.
 _ser_fallbacks: Tuple[Tuple[type, Callable[[Any], str]], ...] = (
     (Token, ser_token),
     (Decimal, ser_decimal),
@@ -82,6 +82,11 @@ _ser_fallbacks: Tuple[Tuple[type, Callable[[Any], str]], ...] = (
     (DisplayString, ser_display_string),
     (int, lambda item: ser_integer(int.__int__(item))),
     (str, lambda item: ser_string(str.__str__(item))),
+    (float, lambda item: ser_decimal(float.__float__(item))),
+    # A full slice via bytes.__getitem__ yields an exact bytes copy whatever
+    # the subclass overrides. This avoids bytes(), which honours __bytes__, and
+    # memoryview(), which honours __buffer__ (Python 3.12 and later only).
+    (bytes, lambda item: ser_byteseq(bytes.__getitem__(item, slice(None)))),
 )
 
 

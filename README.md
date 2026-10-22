@@ -81,6 +81,8 @@ Bare types are represented using the following Python types:
 
 Inner Lists are represented as lists as well.
 
+`ser()` also accepts subclasses of `int`, `str`, `float` and `bytes` (`IntEnum` and `str` Enum members, `numpy.float64`, and so on). It serialises the underlying value and ignores any overrides, such as `__str__` or `__float__`.
+
 ### Parameters
 
 Structured Types that can have parameters (including Dictionary and List members as well as singular Items and Inner Lists) are represented as a tuple of `(value, parameters)` where parameters is a dictionary.
