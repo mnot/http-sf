@@ -73,6 +73,38 @@ class TestOffendingChar(unittest.TestCase):
         self.assertEqual(ctx.exception.offending_char, ord("y"))
         self.assertEqual(state.cursor, 1)
 
+    def test_boolean_context_and_cause(self):
+        # Only the position moved: the key context and the chained exception
+        # are as they were.
+        cases = [
+            (b"?x", "item", None, KeyError),
+            (b"?", "item", None, IndexError),
+            (b"a;b=?x", "item", "b", KeyError),
+            (b"a=?x", "dictionary", "a", KeyError),
+            (b"a=1, b=?", "dictionary", "b", IndexError),
+        ]
+        for value, tltype, context, cause in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertEqual(why.context, context)
+                self.assertIsInstance(why.__cause__, cause)
+                self.assertTrue(why.__suppress_context__)
+                self.assertIs(why.__context__, why.__cause__)
+
+    def test_byteseq_context_and_cause(self):
+        cases = [
+            (b":aG.s:", "item", None),
+            (b"a;b=:aG.s:", "item", "b"),
+            (b"a=:aG.s:", "dictionary", "a"),
+        ]
+        for value, tltype, context in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertEqual(why.context, context)
+                self.assertIsNone(why.__cause__)
+                self.assertFalse(why.__suppress_context__)
+                self.assertIsNone(why.__context__)
+
     def test_byteseq(self):
         # An alphabet error is reported at the first byte outside it. The
         # others (padding, decoding, a missing ":") are about the value as a
@@ -118,12 +150,14 @@ class TestOffendingChar(unittest.TestCase):
     def test_byteseq_alphabet_edges(self):
         # The bytes either side of each run in [A-Za-z0-9+/=].
         message = "Binary Sequence contained disallowed character"
-        for char in b"@[`{,-.:;<>?\x00\x1f \x7f\x80_":
+        for char in b"@[`{,-.:;<>?\x00\x1f \x7f\x80_\t\n\r":
             if char == ord(":"):
                 continue  # that's the delimiter
             value = b":AA" + bytes([char]) + b"AA:"
             with self.subTest(char=char):
                 self.check([(value, "item", message, 3)])
+        # A CRLF pair is reported at the CR, the first of the two.
+        self.check([(b":AA\r\nAA:", "item", message, 3)])
         for char in b"AZaz09+/":
             with self.subTest(allowed=char):
                 parse(b":AA" + bytes([char]) + b"A:", tltype="item")

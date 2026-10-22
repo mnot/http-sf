@@ -77,12 +77,6 @@ class TestByteSeq(unittest.TestCase):
             {"a": (b"\x00", {}), "b": (b"\x04", {})},
         )
 
-    def test_disallowed_character_position(self):
-        with self.assertRaises(StructuredFieldError) as ctx:
-            parse(b"x, :aG.s:", tltype="list")
-        self.assertEqual(ctx.exception.position, 6)
-        self.assertEqual(ctx.exception.offending_char, ord("."))
-
     def test_does_not_copy_remaining_input(self):
         # Slicing the rest of the input for every Byte Sequence makes parsing
         # quadratic; count the bytes sliced rather than timing it.
