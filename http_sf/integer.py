@@ -32,24 +32,24 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
     is_decimal = False  # 1. type is "integer" or "decimal"
     sign = 1  # 2.
     # 3. input_number is data[number_start:cursor]
-    size = len(state.data)
-    if state.cursor < size and state.data[state.cursor] == MINUS:  # 4.
+    data_len = len(state.data)
+    if state.cursor < data_len and state.data[state.cursor] == MINUS:  # 4.
         state.cursor += 1
         sign = -1
-    if state.cursor >= size:  # 5.
+    if state.cursor >= data_len:  # 5.
         state.fail("Number input lacked a number")
     if state.data[state.cursor] not in DIGITS:  # 6.
         state.fail("Number doesn't start with a DIGIT")
     number_start = state.cursor
     decimal_index = 0
-    while state.cursor < size:  # 7.
+    while state.cursor < data_len:  # 7.
         char = state.data[state.cursor]  # 7.1. consume
         state.cursor += 1
         if char in DIGITS:  # 7.2.
             pass
         elif not is_decimal and char == PERIOD:  # 7.3.
-            if state.cursor - number_start - 1 > 12:  # 7.3.1. before appending "."
-                state.fail("Decimal too long.", state.cursor - 1)
+            if state.cursor - number_start - 1 > 12:  # before appending "."
+                state.fail("Decimal too long.", state.cursor - 1)  # 7.3.1.
             is_decimal = True  # 7.3.2.
             decimal_index = state.cursor
         else:  # 7.4. prepend char to input_string

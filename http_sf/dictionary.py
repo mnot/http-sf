@@ -43,9 +43,9 @@ def parse_dictionary(
             return dictionary
         if state.data[state.cursor] != COMMA:
             if not is_equals:
-                offending_char = state.data[state.cursor]
+                next_char = state.data[state.cursor]
                 state.fail(
-                    f"'{this_key}' should be followed by '=', not {chr(offending_char)!r}"
+                    f"'{this_key}' should be followed by '=', not {chr(next_char)!r}"
                 )
             state.fail(f"'{this_key}' has trailing characters after the value")
         state.cursor += 1

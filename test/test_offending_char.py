@@ -1,9 +1,14 @@
 """offending_char is the byte at position, and None only at the end of the input."""
 
+import binascii
+import json
 import unittest
+from pathlib import Path
 
 from http_sf import StructuredFieldError, parse
 from http_sf.state import ParserState
+
+SUITE = Path(__file__).resolve().parent / "tests"
 
 
 def failure(value: bytes, tltype: str) -> StructuredFieldError:
@@ -57,6 +62,7 @@ class TestOffendingChar(unittest.TestCase):
                 (b"@1.5,", "list", "Non-integer Date", 4),
                 (b"@1.5", "item", "Non-integer Date", 4),
                 (b"@999999999999999", "item", "Date value out of range", 16),
+                (b"@999999999999999,", "list", "Date value out of range", 16),
             ]
         )
 
@@ -66,7 +72,12 @@ class TestOffendingChar(unittest.TestCase):
                 (b'%"abc%a', "item", "Incomplete percent encoding", 6),
                 (b'%"abc%', "item", "Incomplete percent encoding", 6),
                 (b'%"%c3"', "item", "Invalid UTF-8", 5),
-                (b'%"abc', "item", "Reached end of input without finding a closing DQUOTE", 5),
+                (
+                    b'%"abc',
+                    "item",
+                    "Reached end of input without finding a closing DQUOTE",
+                    5,
+                ),
                 (b'%"%C3%A9"', "item", "Uppercase percent encoding", 3),
                 (b'%"%gg"', "item", "Invalid percent encoding", 3),
                 (b'%"\x7f"', "item", "String contains disallowed character", 2),
@@ -90,7 +101,12 @@ class TestOffendingChar(unittest.TestCase):
     def test_string(self):
         self.check(
             [
-                (b'"abc', "item", "Reached end of input without finding a closing DQUOTE", 4),
+                (
+                    b'"abc',
+                    "item",
+                    "Reached end of input without finding a closing DQUOTE",
+                    4,
+                ),
                 (b'"abc\\', "item", "Last character of input was a backslash", 5),
                 (b'"a\\b"', "item", "Backslash before disallowed character 'b'", 3),
                 (b'"\x7f"', "item", "String contains disallowed character", 1),
@@ -100,6 +116,9 @@ class TestOffendingChar(unittest.TestCase):
     def test_inner_list(self):
         self.check(
             [
+                # Out of input at the top of the loop, then after an item.
+                (b"(", "list", "End of inner list not found", 1),
+                (b"(a ", "list", "End of inner list not found", 3),
                 (b"(a", "list", "End of inner list not found", 2),
                 (b"(a\x7f)", "list", "Inner list bad delimitation", 2),
             ]
@@ -110,7 +129,12 @@ class TestOffendingChar(unittest.TestCase):
             [
                 (b"a, b c", "list", "Trailing text after item in list", 5),
                 (b"a, ", "list", "Trailing comma at end of list", 3),
-                (b"a=1 b", "dictionary", "'a' has trailing characters after the value", 4),
+                (
+                    b"a=1 b",
+                    "dictionary",
+                    "'a' has trailing characters after the value",
+                    4,
+                ),
                 (b"a b", "dictionary", "'a' should be followed by '=', not 'b'", 2),
                 (b"a=1, ", "dictionary", "Dictionary has trailing comma", 5),
             ]
@@ -122,6 +146,18 @@ class TestOffendingChar(unittest.TestCase):
                 (b"", "item", "Empty item", 0),
                 (b"'a'", "item", "Strings must be double-quoted", 0),
                 (b"(", "item", "Inner Lists are not valid here", 0),
+                (
+                    b"!",
+                    "item",
+                    "There is no Structured Field item starting with '!'",
+                    0,
+                ),
+                (
+                    b"a, \x1b",
+                    "list",
+                    "There is no Structured Field item starting with '\\x1b'",
+                    3,
+                ),
                 (b"a b", "item", "Trailing characters after value (missing comma?)", 2),
                 (b"a;", "item", "Trailing delimiter", 2),
                 (b"a;B=1", "item", "Key cannot begin with an uppercase character", 2),
@@ -144,6 +180,72 @@ class TestOffendingChar(unittest.TestCase):
                     ctx.exception.offending_char,
                     value[position] if position < len(value) else None,
                 )
+
+
+class TestChaining(unittest.TestCase):
+    """The causes passed as cause=... to state.fail()."""
+
+    def test_causes(self):
+        cases = [
+            (b"?x", "item", KeyError),
+            (b"?", "item", IndexError),
+            (b":aGVsbG8=", "item", ValueError),
+            (b":a:", "item", binascii.Error),
+            (b"@999999999999999", "item", OverflowError),
+            (b'"abc', "item", IndexError),
+            (b'"abc\\', "item", IndexError),
+            (b'%"abc', "item", IndexError),
+            (b'%"%c3"', "item", UnicodeDecodeError),
+            (b"(", "list", IndexError),
+            (b"(a", "list", IndexError),
+        ]
+        for value, tltype, cause in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertIsInstance(why.__cause__, cause)
+                self.assertTrue(why.__suppress_context__)
+                self.assertIs(why.__context__, why.__cause__)
+
+    def test_no_cause(self):
+        cases = [
+            (b":=:", "item"),
+            (b"1234567890123.", "item"),
+            (b"a, b c", "list"),
+        ]
+        for value, tltype in cases:
+            with self.subTest(value=value):
+                why = failure(value, tltype)
+                self.assertIsNone(why.__cause__)
+                self.assertFalse(why.__suppress_context__)
+                self.assertIsNone(why.__context__)
+
+
+class TestSuite(unittest.TestCase):
+    """offending_char for every error the shared test suite provokes."""
+
+    def test_suite_errors(self):
+        errors = 0
+        for path in sorted(SUITE.glob("*.json")):
+            with open(path, encoding="utf-8") as fh:
+                tests = json.load(fh)
+            for test in tests:
+                if "raw" not in test:
+                    continue
+                value = b", ".join(line.encode("utf-8") for line in test["raw"])
+                with self.subTest(file=path.name, name=test["name"]):
+                    try:
+                        parse(value, tltype=test["header_type"])
+                    except StructuredFieldError as why:
+                        errors += 1
+                        self.assertIsNotNone(why.position)
+                        if why.position < len(value):
+                            self.assertEqual(why.offending_char, value[why.position])
+                        else:
+                            self.assertIsNone(why.offending_char)
+                    else:
+                        # can_fail: the library legitimately accepts some of these.
+                        self.assertFalse(test.get("must_fail", False))
+        self.assertGreater(errors, 100)
 
 
 class TestFail(unittest.TestCase):

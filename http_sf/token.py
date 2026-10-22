@@ -10,8 +10,8 @@ TOKEN_CHARS = set((ascii_letters + digits + ":/!#$%&'*+-.^_`|~").encode("ascii")
 def parse_token(state: ParserState) -> Token:
     start_cursor = state.cursor
     state.cursor += 1  # consume start char
-    size = len(state.data)
-    while state.cursor < size:
+    data_len = len(state.data)
+    while state.cursor < data_len:
         if state.data[state.cursor] not in TOKEN_CHARS:
             return Token(state.data[start_cursor : state.cursor].decode("ascii"))
         state.cursor += 1
