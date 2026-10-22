@@ -5,7 +5,8 @@ import unittest
 from enum import Enum
 from typing import Any, Callable, Iterator
 
-from http_sf import ser
+from http_sf import DisplayString, Token, ser
+from http_sf.compat import Dictionary, InnerList, Item
 
 
 class Key(str, Enum):
@@ -27,6 +28,20 @@ class LyingKey(str):
 
     def __iter__(self) -> Iterator[str]:
         return iter("a")
+
+
+class HashKey(str):
+    def __hash__(self) -> int:
+        return 1
+
+    def __eq__(self, other: object) -> bool:
+        return False
+
+
+class ClassKey(str):
+    @property  # type: ignore[misc]
+    def __class__(self) -> type:  # type: ignore[override]
+        return int
 
 
 KEY_TYPES: list[tuple[str, Any]] = [("(str, Enum)", Key)]
@@ -96,6 +111,63 @@ class TestSerParamKeys(unittest.TestCase):
     def test_plain_str_keys_unchanged(self) -> None:
         self.assertEqual(ser((1, {"y": 2, "z": True})), "1;y=2;z")
         self.assertEqual(ser({"y": 2, "z": True}), "y=2, z")
+
+    def test_hash_eq_and_class_overrides_ignored(self) -> None:
+        for key in (HashKey("y"), ClassKey("y")):
+            with self.subTest(key=type(key).__name__):
+                self.assertEqual(ser((1, {key: 2})), "1;y=2")
+                self.assertEqual(ser({key: 2}), "y=2")
+
+    def test_non_str_keys_unchanged(self) -> None:
+        # Same exceptions as before the change to ser_key()
+        for key in (1, 1.5, None, b"y", Token("y"), DisplayString("y")):
+            for where, make in PLACES:
+                with self.subTest(key=repr(key), where=where):
+                    with self.assertRaises(TypeError):
+                        ser(make(key))
+
+    def test_bad_str_keys_raise_value_error(self) -> None:
+        for key in ("", "Bad Key", "a b", "café"):
+            for where, make in PLACES:
+                with self.subTest(key=key, where=where):
+                    with self.assertRaises(ValueError):
+                        ser(make(key))
+
+
+class TestCompatKeys(unittest.TestCase):
+    def test_item_params(self) -> None:
+        for name, enum in KEY_TYPES:
+            with self.subTest(enum=name):
+                item = Item(1)
+                item.params[enum.Y] = 2
+                self.assertEqual(str(item), "1;y=2")
+
+    def test_inner_list_params(self) -> None:
+        for name, enum in KEY_TYPES:
+            with self.subTest(enum=name):
+                inner = InnerList([1, 2])
+                inner.params[enum.Y] = 3
+                self.assertEqual(str(inner), "(1 2);y=3")
+
+    def test_dictionary_key_and_member_params(self) -> None:
+        for name, enum in KEY_TYPES:
+            with self.subTest(enum=name):
+                dictionary = Dictionary({enum.Y: 1})
+                self.assertEqual(str(dictionary), "y=1")
+                member = Item(1)
+                member.params[enum.Y] = 2
+                dictionary["z"] = member
+                self.assertEqual(str(dictionary), "y=1, z=1;y=2")
+
+    def test_invalid_key_rejected(self) -> None:
+        for name, enum in KEY_TYPES:
+            with self.subTest(enum=name):
+                item = Item(1)
+                item.params[enum.BAD] = 2
+                with self.assertRaises(ValueError):
+                    str(item)
+                with self.assertRaises(ValueError):
+                    str(Dictionary({enum.BAD: 1}))
 
 
 if __name__ == "__main__":
