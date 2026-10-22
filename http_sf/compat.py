@@ -15,10 +15,11 @@ from typing import (
     List as _List,
     Mapping,
     Optional,
+    SupportsIndex,
     Union,
 )
 
-from typing_extensions import Buffer, SupportsIndex
+from typing_extensions import Buffer
 
 from . import parse as _parse, ser as _ser
 from .innerlist import ser_innerlist
