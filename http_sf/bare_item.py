@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable, Dict, Tuple, Type
 
 from http_sf.boolean import parse_boolean, ser_boolean
 from http_sf.byteseq import BYTE_DELIMIT, parse_byteseq, ser_byteseq
@@ -69,17 +69,28 @@ _ser_map: Dict[Type[Any], Callable[[Any], str]] = {
 }
 
 
+# Checked in order when the exact-type lookup misses. Token and DisplayString
+# (and the other types here) must stay ahead of the int and str entries so
+# that nothing is shadowed. bool can't be subclassed, so the exact lookup has
+# always handled it. Subclasses of int and str (IntEnum, str Enums, ...) are
+# serialised from their underlying value, ignoring any __int__ or __str__
+# override.
+_ser_fallbacks: Tuple[Tuple[type, Callable[[Any], str]], ...] = (
+    (Token, ser_token),
+    (Decimal, ser_decimal),
+    (datetime, ser_date),
+    (DisplayString, ser_display_string),
+    (int, lambda item: ser_integer(int.__int__(item))),
+    (str, lambda item: ser_string(str.__str__(item))),
+)
+
+
 def ser_bare_item(item: BareItemType) -> str:
     try:
         return _ser_map[type(item)](item)
     except KeyError:
         pass
-    if isinstance(item, Token):
-        return ser_token(item)
-    if isinstance(item, Decimal):
-        return ser_decimal(item)
-    if isinstance(item, datetime):
-        return ser_date(item)
-    if isinstance(item, DisplayString):
-        return ser_display_string(item)
+    for item_type, serialiser in _ser_fallbacks:
+        if isinstance(item, item_type):
+            return serialiser(item)
     raise ValueError(f"Can't serialise; unrecognised item with type {type(item)}")
