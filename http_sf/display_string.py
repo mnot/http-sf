@@ -9,14 +9,10 @@ DQUOTE = ord('"')
 def parse_display_string(state: ParserState) -> DisplayString:
     output_array = bytearray([])
     if not state.has_data() or state.data[state.cursor : state.cursor + 2] != b'%"':
-        try:
-            char = state.data[state.cursor]
-        except IndexError:
-            char = None
         raise StructuredFieldError(
             'Display string does not start with %"',
             position=state.cursor,
-            offending_char=char,
+            offending_char=state.data[state.cursor] if state.has_data() else None,
         )
     state.cursor += 2  # consume PERCENT DQUOTE
     while True:
