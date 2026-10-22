@@ -72,20 +72,27 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
             raise StructuredFieldError(
                 "Decimal too long.", position=state.cursor - 1, offending_char=None
             )
+    output_number: Union[int, Decimal]
     if not is_decimal:  # 8.
-        output_integer = int(state.data[number_start : state.cursor])  # 8.1.
-        return output_integer * sign  # 10.
-    if state.data[state.cursor - 1] == PERIOD:  # 9.1.
-        raise StructuredFieldError(
-            "Decimal ends in '.'", position=state.cursor - 1, offending_char=None
+        output_number = int(state.data[number_start : state.cursor])  # 8.1.
+    else:  # 9.
+        if state.data[state.cursor - 1] == PERIOD:  # 9.1.
+            raise StructuredFieldError(
+                "Decimal ends in '.'", position=state.cursor - 1, offending_char=None
+            )
+        if state.cursor - decimal_index > 3:  # 9.2.
+            raise StructuredFieldError(
+                "Decimal fractional component too long",
+                position=state.cursor - 1,
+                offending_char=None,
+            )
+        output_number = Decimal(  # 9.3.
+            state.data[number_start : state.cursor].decode("ascii")
         )
-    if state.cursor - decimal_index > 3:  # 9.2.
-        raise StructuredFieldError(
-            "Decimal fractional component too long",
-            position=state.cursor - 1,
-            offending_char=None,
-        )
-    # 9.3. Decimal() is exact whatever the ambient context; arithmetic isn't,
-    # so negate with copy_negate() rather than multiplying (10.).
-    output_decimal = Decimal(state.data[number_start : state.cursor].decode("ascii"))
-    return output_decimal.copy_negate() if sign < 0 else output_decimal
+    if sign < 0:  # 10. Multiplying or negating a Decimal rounds to the ambient
+        # context; copy_negate() is exact.
+        if isinstance(output_number, Decimal):
+            output_number = output_number.copy_negate()
+        else:
+            output_number = -output_number
+    return output_number  # 11.

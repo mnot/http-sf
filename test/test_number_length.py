@@ -27,7 +27,7 @@ class TestIntegerLength(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(parse(value, tltype="item"), (expected, {}))
 
-    def test_sixteen_characters_fail_whatever_their_value(self):
+    def test_sixteen_characters_fail(self):
         # Step 7.5 counts characters, not magnitude; leading zeros count.
         values = [
             b"1000000000000000",
@@ -45,21 +45,24 @@ class TestIntegerLength(unittest.TestCase):
                 self.assertEqual(why.position, 15 + value.startswith(b"-"))
                 self.assertIsNone(why.offending_char)
 
-    def test_sixteen_characters_fail_in_context(self):
+    def test_sixteen_fail_in_context(self):
+        # (value, header type, index of the 16th digit)
         cases = [
-            (b"0000000000000001;a", "item"),
-            (b"a;b=0000000000000001", "item"),
-            (b"1, 0000000000000001", "list"),
-            (b"(1 0000000000000001)", "list"),
-            (b"a=0000000000000001", "dictionary"),
-            (b"@0000000000000001", "item"),
-            (b"0000000000000001,", "list"),
+            (b"0000000000000001;a", "item", 15),
+            (b"a;b=0000000000000001", "item", 19),
+            (b"1, 0000000000000001", "list", 18),
+            (b"(1 0000000000000001)", "list", 18),
+            (b"a=0000000000000001", "dictionary", 17),
+            (b"@0000000000000001", "item", 16),
+            (b"0000000000000001,", "list", 15),
         ]
-        for value, tltype in cases:
+        for value, tltype, position in cases:
             with self.subTest(value=value):
-                self.assertEqual(failure(value, tltype).args[0], "Integer too long.")
+                why = failure(value, tltype)
+                self.assertEqual(why.args[0], "Integer too long.")
+                self.assertEqual(why.position, position)
 
-    def test_failure_is_at_the_sixteenth_character(self):
+    def test_stops_at_sixteenth(self):
         # The parser stops there; it doesn't scan to the end of the digits.
         why = failure(b"12345678901234567890")
         self.assertEqual(why.args[0], "Integer too long.")
@@ -80,7 +83,7 @@ class TestDecimalLength(unittest.TestCase):
                 self.assertIsInstance(result, Decimal)
                 self.assertEqual(result, expected)
 
-    def test_integer_component_too_long(self):
+    def test_integer_part_too_long(self):
         # Step 7.3.1: more than 12 characters before the ".".
         # Reported at the ".", the character just consumed.
         for value in [
@@ -110,7 +113,7 @@ class TestDecimalLength(unittest.TestCase):
                 self.assertEqual(why.position, 16 + value.startswith(b"-"))
                 self.assertIsNone(why.offending_char)
 
-    def test_fractional_component_too_long(self):
+    def test_fraction_too_long(self):
         # Step 9.2, reached when the total is within 16 characters.
         why = failure(b"1.1234")
         self.assertEqual(why.args[0], "Decimal fractional component too long")
