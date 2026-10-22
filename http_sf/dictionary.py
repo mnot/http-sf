@@ -32,7 +32,8 @@ def parse_dictionary(
                 params = parse_params(state, on_duplicate_key)
                 member = (True, params)
         except StructuredFieldError as why:
-            why.context = this_key
+            if why.context is None:
+                why.context = this_key
             raise why
         if on_duplicate_key and this_key in dictionary:
             on_duplicate_key(this_key, "dictionary")

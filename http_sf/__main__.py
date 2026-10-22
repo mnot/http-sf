@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import sys
 
 from . import parse, to_json
@@ -58,22 +59,22 @@ input_source.add_argument(
 args = parser.parse_args()
 
 if args.stdin:
-    input_string = sys.stdin.read()
+    input_bytes = sys.stdin.buffer.read()
 else:
-    input_string = args.input_string
+    input_bytes = os.fsencode(args.input_string)
 
 if args.field_name and args.field_name.lower() not in retrofit:
     sys.stderr.write(f"FAIL: no known top-level type for field '{args.field_name}'\n")
     sys.exit(1)
 
 try:
-    input_bytes = input_string.encode("utf-8")
     if args.field_type:
         field = parse(input_bytes, tltype=args.field_type)
     else:
         field = parse(input_bytes, name=args.field_name)
     print(to_json(field, sort_keys=True, indent=4))
 except ValueError as why:
-    sys.stderr.write(f"VALUE: {input_string.strip()}\n")
+    shown = input_bytes.decode("utf-8", errors="backslashreplace").strip()
+    sys.stderr.write(f"VALUE: {shown}\n")
     sys.stderr.write(f"FAIL: {why}\n")
     sys.exit(1)

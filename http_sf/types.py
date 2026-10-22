@@ -1,9 +1,7 @@
 from collections import UserString
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Tuple, Union
-
-from typing_extensions import TypeAlias
+from typing import Any, Callable, Dict, List, Tuple, TypeAlias, Union
 
 
 class Token(UserString):

@@ -115,6 +115,74 @@ class TestInnerList(unittest.TestCase):
         self.assertEqual(str(inner), '("x" y);z')
 
 
+class TestBulkMutation(unittest.TestCase):
+    """extend and += must itemise values the way append and insert do."""
+
+    def test_list_extend(self):
+        my_list = List(["a"])
+        my_list.extend([1, Token("b"), ["x", "y"]])
+        self.assertTrue(all(isinstance(i, (Item, InnerList)) for i in my_list))
+        self.assertIsInstance(my_list[-1], InnerList)
+        self.assertEqual(str(my_list), '"a", 1, b, ("x" "y")')
+
+    def test_list_extend_generator(self):
+        my_list = List()
+        my_list.extend(i for i in [1, 2])
+        self.assertEqual(str(my_list), "1, 2")
+
+    def test_list_iadd(self):
+        my_list = List([1])
+        alias = my_list
+        my_list += [2, "c"]
+        self.assertIs(my_list, alias)
+        self.assertEqual(str(my_list), '1, 2, "c"')
+
+    def test_list_extend_keeps_items(self):
+        item = Item(5)
+        item.params["a"] = True
+        my_list = List()
+        my_list.extend([item])
+        self.assertIs(my_list[0], item)
+        self.assertEqual(str(my_list), "5;a")
+
+    def test_list_add(self):
+        self.assertEqual(str(List([1]) + [2]), "1, 2")
+        self.assertEqual(str([0] + List([1])), "0, 1")
+
+    def test_inner_list_extend(self):
+        inner = InnerList([1])
+        inner.params["z"] = True
+        inner.extend([2, Token("t")])
+        self.assertEqual(str(inner), "(1 2 t);z")
+
+    def test_inner_list_iadd(self):
+        inner = InnerList([1])
+        inner.params["z"] = True
+        inner += [2, "s"]
+        self.assertIsInstance(inner, InnerList)
+        self.assertEqual(str(inner), '(1 2 "s");z')
+
+    def test_list_extend_self(self):
+        my_list = List([1, 2])
+        my_list.extend(my_list)
+        self.assertEqual(str(my_list), "1, 2, 1, 2")
+        my_list += my_list
+        self.assertEqual(len(my_list), 8)
+
+    def test_inner_list_extend_self(self):
+        inner = InnerList([1, 2])
+        inner.extend(inner)
+        self.assertEqual(str(inner), "(1 2 1 2)")
+        inner += inner
+        self.assertEqual(len(inner), 8)
+
+    def test_inner_list_add(self):
+        self.assertEqual(str(InnerList([1]) + [2]), "(1 2)")
+
+    def test_inner_list_copy(self):
+        self.assertEqual(str(InnerList([1, 2]).copy()), "(1 2)")
+
+
 class TestTokenAndDisplayString(unittest.TestCase):
     def test_token_constructor(self):
         token = Token("abc")
