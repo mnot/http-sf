@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 __version__ = "1.4.0"
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from http_sf.dictionary import parse_dictionary, ser_dictionary
 from http_sf.errors import StructuredFieldError
@@ -65,11 +65,18 @@ __all__ = [
 
 
 def parse(
-    value: bytes,
+    value: Union[bytes, bytearray, memoryview],
     name: Optional[str] = None,
     tltype: Optional[str] = None,
     on_duplicate_key: Optional[OnDuplicateKeyType] = None,
 ) -> StructuredType:
+    if isinstance(value, (bytearray, memoryview)):
+        value = bytes(value)
+    elif not isinstance(value, bytes):
+        raise TypeError(
+            f"parse() requires bytes, bytearray or memoryview, not "
+            f"{type(value).__name__}; use .encode() to convert a str first"
+        )
     structure: StructuredType
     if name is not None:
         tltype = retrofit.get(name.lower(), tltype)

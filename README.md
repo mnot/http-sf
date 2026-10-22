@@ -17,7 +17,7 @@ Textual HTTP headers can be parsed by calling `parse`; the return value is a dat
 {'foo': (True, {'a': 1}), 'bar': (True, {'b': 2})}
 ~~~
 
-`parse()` takes a bytes-like object as the first argument. If you want to parse a string, please `.encode()` it first.
+`parse()` takes `bytes`, `bytearray` or `memoryview` as the first argument (`bytearray` and `memoryview` are copied to `bytes` first). Anything else, including `str`, raises a `TypeError`; if you want to parse a string, please `.encode()` it first.
 
 #### Indicating Top-Level Type
 
