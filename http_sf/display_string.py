@@ -9,14 +9,10 @@ DQUOTE = ord('"')
 def parse_display_string(state: ParserState) -> DisplayString:
     output_array = bytearray([])
     if not state.has_data() or state.data[state.cursor : state.cursor + 2] != b'%"':
-        try:
-            char = state.data[state.cursor]
-        except IndexError:
-            char = None
         raise StructuredFieldError(
             'Display string does not start with %"',
             position=state.cursor,
-            offending_char=char,
+            offending_char=state.data[state.cursor] if state.has_data() else None,
         )
     state.cursor += 2  # consume PERCENT DQUOTE
     while True:
@@ -30,16 +26,13 @@ def parse_display_string(state: ParserState) -> DisplayString:
             ) from why
         state.cursor += 1
         if char == PERCENT:
-            try:
-                next_chars = state.data[state.cursor : state.cursor + 2]
-                if len(next_chars) < 2:
-                    raise IndexError
-            except IndexError as why:
+            next_chars = state.data[state.cursor : state.cursor + 2]
+            if len(next_chars) < 2:
                 raise StructuredFieldError(
                     "Incomplete percent encoding",
                     position=state.cursor,
                     offending_char=None,
-                ) from why
+                )
             state.cursor += 2
             if next_chars.lower() != next_chars:
                 raise StructuredFieldError(
@@ -53,15 +46,7 @@ def parse_display_string(state: ParserState) -> DisplayString:
                     position=state.cursor - 2,
                     offending_char=next_chars[0],
                 )
-            try:
-                octet = int(next_chars, base=16)
-            except ValueError as why:
-                raise StructuredFieldError(
-                    "Invalid percent encoding",
-                    position=state.cursor - 2,
-                    offending_char=next_chars[0],
-                ) from why
-            output_array.append(octet)
+            output_array.append(int(next_chars, base=16))
         elif char == DQUOTE:
             try:
                 output_string = output_array.decode("utf-8")

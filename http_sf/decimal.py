@@ -7,10 +7,7 @@ from decimal import (
     Overflow,
     localcontext,
 )
-from typing import Union, cast
-
-from http_sf.integer import parse_number
-from http_sf.state import ParserState
+from typing import Union
 
 INT_DIGITS = 12
 FRAC_DIGITS = 3
@@ -22,10 +19,6 @@ _CONTEXT = Context(
     rounding=ROUND_HALF_EVEN,
     traps=[InvalidOperation, DivisionByZero, Overflow],
 )
-
-
-def parse_decimal(state: ParserState) -> Decimal:
-    return cast(Decimal, parse_number(state))
 
 
 def ser_decimal(input_decimal: Union[Decimal, float]) -> str:

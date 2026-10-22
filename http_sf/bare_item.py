@@ -30,34 +30,30 @@ for c in NUMBER_START_CHARS:
 
 def parse_bare_item(state: ParserState) -> BareItemType:
     if not state.has_data():
-        try:
-            char = state.data[state.cursor]
-        except IndexError:
-            char = None
         raise StructuredFieldError(
-            "Empty item", position=state.cursor, offending_char=char
+            "Empty item", position=state.cursor, offending_char=None
         )
-    try:
-        next_char = state.data[state.cursor]
-        return _parse_map[next_char](state)
-    except KeyError as why:
+    next_char = state.data[state.cursor]
+    parser = _parse_map.get(next_char)
+    if parser is None:
         if next_char == ord(b"'"):
             raise StructuredFieldError(
                 "Strings must be double-quoted",
                 position=state.cursor,
                 offending_char=next_char,
-            ) from why
+            )
         if next_char == ord(b"("):
             raise StructuredFieldError(
                 "Inner Lists are not valid here",
                 position=state.cursor,
                 offending_char=next_char,
-            ) from why
+            )
         raise StructuredFieldError(
             f"There is no Structured Field item starting with {chr(next_char)!r}",
             position=state.cursor,
             offending_char=next_char,
-        ) from why
+        )
+    return parser(state)
 
 
 _ser_map: Dict[Type[Any], Callable[[Any], str]] = {

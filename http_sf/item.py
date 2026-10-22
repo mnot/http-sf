@@ -5,10 +5,6 @@ from .parameters import parse_params, ser_params
 from .state import ParserState
 from .types import BareItemType, ItemType, OnDuplicateKeyType, ParamsType
 
-PAREN_OPEN = ord(b"(")
-SEMICOLON = ord(b";")
-EQUALS = ord(b"=")
-
 
 def parse_item(
     state: ParserState, on_duplicate_key: Optional[OnDuplicateKeyType] = None

@@ -1,7 +1,6 @@
 from .errors import StructuredFieldError
 from .state import ParserState
 
-QUESTION = ord(b"?")
 ONE = ord(b"1")
 ZERO = ord(b"0")
 
