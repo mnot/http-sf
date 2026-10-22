@@ -40,11 +40,11 @@ When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is rai
 ~~~ python
 >>> from http_sf import parse, StructuredFieldError
 >>> try:
-...     parse(b"foo; bar", tltype="item")
+...     parse(b"foo;", tltype="item")
 ... except StructuredFieldError as e:
 ...     print(f"Error at {e.position}: {e}")
 ...
-Error at 8: Parameter value definition expected
+Error at 4: Trailing delimiter
 ~~~
 
 #### Duplicate Keys
@@ -68,12 +68,13 @@ In the returned data, Dictionaries are represented as Python dictionaries; Lists
 Bare types are represented using the following Python types:
 
 * Integers: `int`
-* Decimals: `float`
+* Decimals: `decimal.Decimal` (`ser()` accepts `float` as well)
 * Strings: `str`
 * Tokens: `http_sf.Token` (a `UserString`)
 * Byte Sequences: `bytes`
 * Booleans: `bool`
 * Dates: `datetime.datetime` (parsed values are timezone-aware, in UTC; values to be serialised must be timezone-aware too, or `ser()` raises `ValueError`)
+  * Python's `datetime` can only represent years 1 to 9999, so `parse()` raises `StructuredFieldError` for Date values outside `@-62135596800` (0001-01-01T00:00:00Z) to `@253402300799` (9999-12-31T23:59:59Z), even though RFC 9651 allows the full Integer range.
 * Display Strings: `http_sf.DisplayString` (a `UserString`)
 
 Inner Lists are represented as lists as well.
@@ -156,8 +157,11 @@ or:
 
 ~~~ bash
 > python3 -m http_sf -i "foo;&bar=baz"
-FAIL: Key does not begin with lcalpha or * at: &bar=baz
+VALUE: foo;&bar=baz
+FAIL: Key does not begin with lcalpha or *
 ~~~
+
+(On failure, the input and the error are written to standard error, and the exit status is 1.)
 
 Alternatively, you can pass the field name with the `-n` option, provided that it is a compatible retrofit field:
 

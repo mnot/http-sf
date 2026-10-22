@@ -1,10 +1,10 @@
 import base64
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from string import ascii_lowercase, ascii_uppercase, digits
-from typing import Any
+from typing import Any, Union
 
 from .errors import StructuredFieldError
 from .state import ParserState
@@ -12,6 +12,19 @@ from .types import DisplayString, JsonDict, StructuredType, Token
 
 SPACE = ord(b" ")
 HTTP_OWS = set(b" \t")
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def datetime_from_timestamp(value: Union[int, float]) -> datetime:
+    """
+    Convert seconds since the Unix epoch to an aware UTC datetime.
+
+    Unlike datetime.fromtimestamp, this doesn't go through the C library, so
+    it behaves the same on every platform (including for negative values).
+    Raises OverflowError outside the range of datetime (and for infinity), and
+    ValueError for NaN. Other types (e.g., Decimal) raise TypeError.
+    """
+    return EPOCH + timedelta(seconds=value)
 
 
 def discard_ows(state: ParserState) -> None:
@@ -116,8 +129,8 @@ def json_load(inobj: JsonDict) -> Any:
         return base64.b32decode(inobj["value"])
     if objtype == "date":
         try:
-            return datetime.fromtimestamp(inobj["value"], tz=timezone.utc)
-        except (ValueError, OSError):
+            return datetime_from_timestamp(inobj["value"])
+        except (ValueError, OverflowError):
             return int(inobj["value"])
     if objtype == "displaystring":
         return DisplayString(inobj["value"])

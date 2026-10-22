@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from .errors import StructuredFieldError
 from .integer import parse_integer
 from .state import ParserState
+from .util import datetime_from_timestamp
 
 
 def parse_date(state: ParserState) -> datetime:
@@ -13,8 +14,8 @@ def parse_date(state: ParserState) -> datetime:
             "Non-integer Date", position=state.cursor, offending_char=None
         )
     try:
-        return datetime.fromtimestamp(value, tz=timezone.utc)
-    except (ValueError, OSError) as why:
+        return datetime_from_timestamp(value)
+    except OverflowError as why:
         raise StructuredFieldError(
             "Date value out of range", position=state.cursor, offending_char=None
         ) from why
