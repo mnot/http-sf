@@ -1,4 +1,4 @@
-"""ser() accepts subclasses of int and str, serialising their underlying value."""
+"""ser() accepts subclasses of int, str, float and bytes, serialising their underlying value."""
 
 import unittest
 from enum import Enum, IntEnum, IntFlag
@@ -41,6 +41,36 @@ class LoudStr(str):
 
     def __repr__(self) -> str:
         return "LOUD"
+
+
+class LyingFloat(float):
+    def __float__(self) -> float:
+        return 99.0
+
+    def __repr__(self) -> str:
+        return "LIE"
+
+
+class LyingBytes(bytes):
+    def __bytes__(self) -> bytes:
+        return b"lie"
+
+    def __getitem__(self, key):
+        return b"lie"
+
+    def __iter__(self):
+        return iter(b"lie")
+
+    def __len__(self) -> int:
+        return 3
+
+
+class PlainFloat(float):
+    pass
+
+
+class PlainBytes(bytes):
+    pass
 
 
 class TokenStr(Token, str):  # a str that is also a Token
@@ -94,12 +124,60 @@ class TestSerSubclasses(unittest.TestCase):
         self.assertEqual(ser(False), "?0")
         self.assertEqual(ser(1), "1")
         self.assertEqual(ser("a"), '"a"')
+        self.assertEqual(ser(1.5), "1.5")
+        self.assertEqual(ser(b"hi"), ":aGk=:")
 
     def test_token_and_display_string_keep_their_behaviour(self):
         self.assertEqual(ser(Token("abc")), "abc")
         self.assertEqual(ser(DisplayString("abc")), '%"abc"')
         self.assertEqual(ser(TokenStr("abc")), "abc")
         self.assertEqual(ser(DisplayStr("abc")), '%"abc"')
+
+    def test_float_subclass(self):
+        self.assertEqual(ser(PlainFloat(1.5)), "1.5")
+        self.assertEqual(ser(PlainFloat(-0.0)), "0.0")
+
+    def test_float_subclass_ignores_overrides(self):
+        self.assertEqual(ser(LyingFloat(1.5)), "1.5")
+
+    def test_float_subclass_matches_float(self):
+        for value in (
+            1.5,
+            0.0,
+            -0.0,
+            2.0005,
+            1.00049,
+            123456789012.345678,
+            5e-324,
+            float("nan"),
+            float("inf"),
+            -float("inf"),
+            1e12,
+            999999999999.9996,
+            1e300,
+        ):
+            with self.subTest(value=value):
+                try:
+                    expected = ser(value)
+                except ValueError as why:
+                    with self.assertRaises(ValueError) as caught:
+                        ser(PlainFloat(value))
+                    self.assertEqual(str(caught.exception), str(why))
+                else:
+                    self.assertEqual(ser(PlainFloat(value)), expected)
+
+    def test_bytes_subclass(self):
+        self.assertEqual(ser(PlainBytes(b"hi")), ":aGk=:")
+        self.assertEqual(ser(PlainBytes(b"")), "::")
+
+    def test_bytes_subclass_ignores_overrides(self):
+        self.assertEqual(ser(LyingBytes(b"hi")), ":aGk=:")
+
+    def test_float_and_bytes_subclasses_nested(self):
+        self.assertEqual(
+            ser({"a": (PlainFloat(1.5), {"b": PlainBytes(b"hi")})}),
+            "a=1.5;b=:aGk=:",
+        )
 
     def test_unrecognised_still_rejected(self):
         for value in (None, object(), {1}):
