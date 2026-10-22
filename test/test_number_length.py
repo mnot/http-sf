@@ -113,6 +113,69 @@ class TestDecimalLength(unittest.TestCase):
         self.assertEqual(why.args[0], "Decimal fractional component too long")
         self.assertEqual(why.position, 5)
 
+    def test_fraction_too_long_position(self):
+        # Reported at the first digit past the three allowed ("." plus 4), not
+        # at the last digit, however long the fraction runs.
+        for int_digits in range(1, 12):
+            for frac_digits in range(4, 16 - int_digits):
+                for sign in [b"", b"-"]:
+                    value = sign + b"1" * int_digits + b"." + b"5" * frac_digits
+                    with self.subTest(value=value):
+                        why = failure(value)
+                        self.assertEqual(
+                            why.args[0], "Decimal fractional component too long"
+                        )
+                        self.assertEqual(why.position, len(sign) + int_digits + 1 + 3)
+                        self.assertEqual(why.offending_char, ord("5"))
+
+    def test_fraction_too_long_examples(self):
+        for value, position in [
+            (b"1.23456789", 5),
+            (b"1.234567890123", 5),
+            (b"-1.2345", 6),
+            (b"-1.23456789", 6),
+            (b"12345678901.2345", 15),
+        ]:
+            with self.subTest(value=value):
+                why = failure(value)
+                self.assertEqual(why.args[0], "Decimal fractional component too long")
+                self.assertEqual(why.position, position)
+                self.assertEqual(why.offending_char, value[position])
+
+    def test_fraction_too_long_contexts(self):
+        # The error comes from parse_number, so every caller reports it alike.
+        cases = [
+            (b"@1.23456789", "item", 6),
+            (b"@-1.2345", "item", 7),
+            (b"a;p=1.23456789", "item", 9),
+            (b"1.23456789;p=1", "item", 5),
+            (b"1.23456789, 2", "list", 5),
+            (b"1, 2.23456789", "list", 8),
+            (b"(1 2.23456789)", "list", 8),
+            (b"(1.23456789)", "list", 6),
+            (b"a=1.23456789", "dictionary", 7),
+            (b"a=1, b=2.23456789", "dictionary", 12),
+            (b"a=(1 2.23456789)", "dictionary", 10),
+            (b"a;p=1.23456789", "dictionary", 9),
+            (b"1.23456789 ", "item", 5),
+            (b"1.2345a", "item", 5),
+        ]
+        for value, tltype, position in cases:
+            with self.subTest(value=value, tltype=tltype):
+                why = failure(value, tltype)
+                self.assertEqual(why.args[0], "Decimal fractional component too long")
+                self.assertEqual(why.position, position)
+                self.assertEqual(why.offending_char, value[position])
+
+    def test_fraction_three_digits_ok(self):
+        for value, expected in [
+            (b"1.123", Decimal("1.123")),
+            (b"-1.123", Decimal("-1.123")),
+            (b"12345678901.123", Decimal("12345678901.123")),
+        ]:
+            with self.subTest(value=value):
+                self.assertEqual(parse(value, tltype="item"), (expected, {}))
+
     def test_ends_in_period(self):
         why = failure(b"123456789012.")
         self.assertEqual(why.args[0], "Decimal ends in '.'")
