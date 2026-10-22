@@ -40,11 +40,11 @@ When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is rai
 ~~~ python
 >>> from http_sf import parse, StructuredFieldError
 >>> try:
-...     parse(b"foo; bar", tltype="item")
+...     parse(b"foo;", tltype="item")
 ... except StructuredFieldError as e:
 ...     print(f"Error at {e.position}: {e}")
 ...
-Error at 8: Parameter value definition expected
+Error at 4: Trailing delimiter
 ~~~
 
 #### Duplicate Keys
@@ -157,8 +157,11 @@ or:
 
 ~~~ bash
 > python3 -m http_sf -i "foo;&bar=baz"
-FAIL: Key does not begin with lcalpha or * at: &bar=baz
+VALUE: foo;&bar=baz
+FAIL: Key does not begin with lcalpha or *
 ~~~
+
+(On failure, the input and the error are written to standard error, and the exit status is 1.)
 
 Alternatively, you can pass the field name with the `-n` option, provided that it is a compatible retrofit field:
 
