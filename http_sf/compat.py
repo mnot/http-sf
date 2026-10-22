@@ -144,6 +144,13 @@ class InnerList(UserList):  # type: ignore[type-arg]
     def insert(self, i: int, item: AllItemType) -> None:
         self.data.insert(i, _itemise(item))
 
+    def extend(self, other: Iterable[AllItemType]) -> None:
+        self.data.extend([_itemise(v) for v in other])
+
+    def __iadd__(self, other: Any) -> "InnerList":  # type: ignore[misc]
+        self.extend(other)
+        return self
+
 
 class Dictionary(UserDict):  # type: ignore[type-arg]
     def __init__(
@@ -199,6 +206,13 @@ class List(UserList):  # type: ignore[type-arg]
 
     def insert(self, i: int, item: AllItemType) -> None:
         self.data.insert(i, _itemise(item))
+
+    def extend(self, other: Iterable[AllItemType]) -> None:
+        self.data.extend([_itemise(v) for v in other])
+
+    def __iadd__(self, other: Any) -> "List":  # type: ignore[misc]
+        self.extend(other)
+        return self
 
 
 structures = {"dictionary": Dictionary, "list": List, "item": Item}
