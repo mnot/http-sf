@@ -32,12 +32,32 @@ def parse_display_string(state: ParserState) -> DisplayString:
             try:
                 output_string = output_array.decode("utf-8")
             except UnicodeDecodeError as why:
-                state.fail("Invalid UTF-8", state.cursor - 1, cause=why)
+                state.fail("Invalid UTF-8", _utf8_error_position(state, why), cause=why)
             return DisplayString(output_string)
         elif 31 < char < 127:
             output_array.append(char)
         else:
             state.fail("String contains disallowed character", state.cursor - 1)
+
+
+def _utf8_error_position(state: ParserState, why: UnicodeDecodeError) -> int:
+    """
+    Where the decoder first rejects a byte, mapped back to the input.
+
+    That is the byte at why.start if it can't begin a sequence (%80, %c0, %ff).
+    Otherwise it is a lead byte, and the rejected byte is the one after the
+    valid part of the sequence (why.end): the 'a' in %c3a, the %80 in %e0%80.
+    If the string ends first (%c3), that's the closing DQUOTE.
+    """
+    rejected = why.start
+    if 0xC2 <= why.object[why.start] <= 0xF4:
+        rejected = why.end
+    # The content has no other DQUOTE, and an escape is three input bytes for
+    # one decoded byte.
+    position = state.data.rfind(b'"', 0, state.cursor - 1) + 1
+    for _ in range(rejected):
+        position += 3 if state.data[position] == PERCENT else 1
+    return position
 
 
 def ser_display_string(inval: DisplayString) -> str:

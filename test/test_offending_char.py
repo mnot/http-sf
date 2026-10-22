@@ -191,8 +191,8 @@ class TestOffendingChar(unittest.TestCase):
     def test_date(self):
         self.check(
             [
-                (b"@1.5,", "list", "Non-integer Date", 4),
-                (b"@1.5", "item", "Non-integer Date", 4),
+                (b"@1.5,", "list", "Non-integer Date", 2),
+                (b"@1.5", "item", "Non-integer Date", 2),
                 (b"@999999999999999", "item", "Date value out of range", 16),
                 (b"@999999999999999,", "list", "Date value out of range", 16),
             ]
@@ -204,6 +204,7 @@ class TestOffendingChar(unittest.TestCase):
                 (b'%"abc%a', "item", "Incomplete percent encoding", 6),
                 (b'%"abc%', "item", "Incomplete percent encoding", 6),
                 (b'%"%c3"', "item", "Invalid UTF-8", 5),
+                (b'%"%ff"', "item", "Invalid UTF-8", 2),
                 (
                     b'%"abc',
                     "item",
