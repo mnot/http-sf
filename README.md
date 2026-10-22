@@ -31,7 +31,7 @@ Note that if you use `name`, a `KeyError` will be raised if the type associated 
 
 #### Error Handling
 
-When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is raised. This exception has attributes that can be used to debugging the error:
+When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is raised. Its string form includes the position and context when they are known, and it has attributes that can be used to debug the error:
 
 * `position`: The character offset in the input bytes where the error was detected.
 * `offending_char`: The character at the position where the error was detected.
@@ -42,9 +42,11 @@ When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is rai
 >>> try:
 ...     parse(b"foo;", tltype="item")
 ... except StructuredFieldError as e:
-...     print(f"Error at {e.position}: {e}")
+...     print(e)
+...     print(e.position)
 ...
-Error at 4: Trailing delimiter
+Trailing delimiter at position 4
+4
 ~~~
 
 #### Duplicate Keys
@@ -158,7 +160,7 @@ or:
 ~~~ bash
 > python3 -m http_sf -i "foo;&bar=baz"
 VALUE: foo;&bar=baz
-FAIL: Key does not begin with lcalpha or *
+FAIL: Key does not begin with lcalpha or * at position 4
 ~~~
 
 (On failure, the input and the error are written to standard error, and the exit status is 1.)
