@@ -19,6 +19,9 @@ def parse_token(state: ParserState) -> Token:
 
 
 def ser_token(token: Token) -> str:
+    data = token.data
+    if not issubclass(type(data), str):
+        len(data)  # data with no length (None, int, ...) raises TypeError, as ever
     # Validate and emit the same plain str, whatever the token wraps
     value = str(token)
     if not value:

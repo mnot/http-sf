@@ -16,7 +16,9 @@ class Token(UserString):
         data = self.data
         if type(data) is str:  # pylint: disable=unidiomatic-typecheck
             return data
-        if isinstance(data, str):
+        # issubclass(type()) rather than isinstance(), so an object that only
+        # fakes a str __class__ is formatted as it always was
+        if issubclass(type(data), str):
             return str.__str__(data)
         return str(data)
 

@@ -2,7 +2,7 @@
 
 import sys
 import unittest
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Any, Callable, Iterator
 
 from http_sf import Token, parse, ser, to_json
@@ -42,6 +42,34 @@ class ClassStr(str):
     @property  # type: ignore[misc]
     def __class__(self) -> type:  # type: ignore[override]
         return int
+
+
+class Number(IntEnum):
+    ONE = 1
+
+
+class StrProxy:
+    """Not a str, but claims to be one through __class__."""
+
+    @property  # type: ignore[misc]
+    def __class__(self) -> type:  # type: ignore[override]
+        return str
+
+    def __len__(self) -> int:
+        return 3
+
+    def __str__(self) -> str:
+        return "abc"
+
+
+class CustomToken(Token):
+    def __str__(self) -> str:
+        return "custom"
+
+
+class SuperToken(Token):
+    def __str__(self) -> str:
+        return super().__str__()
 
 
 ENUMS: list[tuple[str, Any]] = [("(str, Enum)", Tok)]
@@ -151,6 +179,12 @@ class TestSerTokenStrSubclasses(unittest.TestCase):
     def test_class_override_ignored(self) -> None:
         self.assertEqual(ser(Token(ClassStr("y"))), "y")
 
+    def test_object_faking_str_class_unchanged(self) -> None:
+        proxy = StrProxy()
+        self.assertTrue(isinstance(proxy, str))
+        self.assertEqual(str(Token(proxy)), "abc")  # type: ignore[arg-type]
+        self.assertEqual(ser(Token(proxy)), "abc")  # type: ignore[arg-type]
+
     def test_result_is_plain_str(self) -> None:
         for value in (Tok.Y, LoudStr("y"), LyingStr("y"), "y"):
             with self.subTest(value=type(value).__name__):
@@ -185,6 +219,23 @@ class TestPlainTokens(unittest.TestCase):
         self.assertIs(type(token.data), str)
         self.assertIs(type(params["p"].data), str)
         self.assertEqual(ser(parsed), "foo;p=bar")
+
+    def test_non_str_data_raises_type_error(self) -> None:
+        for data in (None, True, False, 0, 5, 1.5, Number.ONE):
+            for where, make in PLACES:
+                with self.subTest(data=repr(data), where=where):
+                    with self.assertRaises(TypeError):
+                        ser(make(Token(data)))  # type: ignore[arg-type]
+
+    def test_token_subclass_str_override_honoured(self) -> None:
+        self.assertEqual(ser(CustomToken("abc")), "custom")
+        self.assertEqual(ser(CustomToken(Tok.Y)), "custom")
+        self.assertEqual(ser((1, {"p": CustomToken("abc")})), "1;p=custom")
+
+    def test_token_subclass_calling_super_str(self) -> None:
+        self.assertEqual(ser(SuperToken(Tok.Y)), "y")
+        with self.assertRaises(ValueError):
+            ser(SuperToken(Tok.SPACE))
 
     def test_token_from_token(self) -> None:
         self.assertEqual(ser(Token(Token(Tok.Y))), "y")  # type: ignore[arg-type]
