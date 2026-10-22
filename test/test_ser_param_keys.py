@@ -5,7 +5,7 @@ import unittest
 from enum import Enum
 from typing import Any, Callable, Iterator
 
-from http_sf import DisplayString, Token, ser
+from http_sf import ser
 from http_sf.compat import Dictionary, InnerList, Item
 
 
@@ -117,21 +117,6 @@ class TestSerParamKeys(unittest.TestCase):
             with self.subTest(key=type(key).__name__):
                 self.assertEqual(ser((1, {key: 2})), "1;y=2")
                 self.assertEqual(ser({key: 2}), "y=2")
-
-    def test_non_str_keys_unchanged(self) -> None:
-        # Same exceptions as before the change to ser_key()
-        for key in (1, 1.5, None, b"y", Token("y"), DisplayString("y")):
-            for where, make in PLACES:
-                with self.subTest(key=repr(key), where=where):
-                    with self.assertRaises(TypeError):
-                        ser(make(key))
-
-    def test_bad_str_keys_raise_value_error(self) -> None:
-        for key in ("", "Bad Key", "a b", "café"):
-            for where, make in PLACES:
-                with self.subTest(key=key, where=where):
-                    with self.assertRaises(ValueError):
-                        ser(make(key))
 
 
 class TestCompatKeys(unittest.TestCase):

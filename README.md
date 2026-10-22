@@ -83,6 +83,8 @@ Inner Lists are represented as lists as well.
 
 `ser()` also accepts subclasses of `int`, `str`, `float` and `bytes` (`IntEnum` and `str` Enum members, `numpy.float64`, and so on). It serialises the underlying value and ignores any overrides, such as `__str__` or `__float__`.
 
+Parameter and Dictionary keys must be `str`; `ser()` raises `TypeError` for any other type, and `ValueError` for a `str` that isn't a valid key. Subclasses are serialised by their underlying value, as above.
+
 ### Parameters
 
 Structured Types that can have parameters (including Dictionary and List members as well as singular Items and Inner Lists) are represented as a tuple of `(value, parameters)` where parameters is a dictionary.
