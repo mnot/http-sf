@@ -10,6 +10,61 @@ class TestByteSeq(unittest.TestCase):
         self.assertEqual(parse(b":aGVsbG8=:", tltype="item")[0], b"hello")
         self.assertEqual(parse(b"::", tltype="item")[0], b"")
 
+    def test_padding_is_optional(self):
+        # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding.
+        for value, expected in (
+            (b":aGVsbG8:", b"hello"),  # unpadded
+            (b":uuueGVsbG8=:", b"\xba\xeb\x9e\x19[\x1b\x1b"),  # partially padded
+            (b":aGVsbG8==:", b"hello"),  # extra padding
+            (b":aGVsbG8=:", b"hello"),
+            (b":AA:", b"\x00"),
+            (b":AA=:", b"\x00"),
+            (b":AA==:", b"\x00"),
+            (b":AAA:", b"\x00\x00"),
+            (b":AAAA:", b"\x00\x00\x00"),
+            (b":iZ==:", b"\x89"),  # non-zero pad bits
+            (b":iZ:", b"\x89"),  # non-zero pad bits, unpadded
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(parse(value, tltype="item")[0], expected)
+
+    def test_padding_elsewhere_still_fails(self):
+        for value in (
+            b":=aGVsbG8=:",  # padding at beginning
+            b":a=GVsbG8=:",  # padding in middle
+            b":aGVs=bG8=:",
+            b":a:",  # one leftover character can't encode a byte
+            b":aGVsbG8aa:",  # likewise, after full groups
+        ):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError):
+                parse(value, tltype="item")
+
+    def test_padding_run_limits(self):
+        # Padding is at most two characters, and needs data in front of it.
+        for value in (
+            b":AA===:",
+            b":AAAA====:",
+            b":aGVsbG8===:",
+            b":=:",
+            b":==:",
+            b":===:",
+            b":====:",
+        ):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError):
+                parse(value, tltype="item")
+
+    def test_alphabet_still_enforced(self):
+        for value in (
+            b":aGVsbG8=!:",
+            b":aGVsbG8.:",
+            b":aGVsb G8=:",
+            b":aGVs\nbG8=:",  # line feed
+            b":aGVs\r\nbG8=:",
+            b":_-Ah:",  # base64url alphabet
+        ):
+            with self.subTest(value=value), self.assertRaises(StructuredFieldError):
+                parse(value, tltype="item")
+
     def test_unterminated(self):
         for value in (b":aGVsbG8=", b":", b"a=:aGVsbG8="):
             with self.subTest(value=value), self.assertRaises(StructuredFieldError) as ctx:
