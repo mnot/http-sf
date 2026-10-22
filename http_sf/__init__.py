@@ -73,10 +73,13 @@ def parse(
     if isinstance(value, (bytearray, memoryview)):
         value = bytes(value)
     elif not isinstance(value, bytes):
-        raise TypeError(
+        message = (
             f"parse() requires bytes, bytearray or memoryview, not "
-            f"{type(value).__name__}; use .encode() to convert a str first"
+            f"{type(value).__name__}"
         )
+        if isinstance(value, str):
+            message += "; use .encode() to convert a str first"
+        raise TypeError(message)
     structure: StructuredType
     if name is not None:
         tltype = retrofit.get(name.lower(), tltype)
