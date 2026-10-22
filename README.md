@@ -73,7 +73,8 @@ Bare types are represented using the following Python types:
 * Tokens: `http_sf.Token` (a `UserString`)
 * Byte Sequences: `bytes`
 * Booleans: `bool`
-* Dates: `datetime.datetime` (parsed values are timezone-aware, in UTC; values to be serialised must be timezone-aware too, or `ser()` raises `ValueError`). Python's `datetime` can only represent years 1 to 9999, so `parse()` raises `StructuredFieldError` for Date values outside `@-62135596800` (0001-01-01T00:00:00Z) to `@253402300799` (9999-12-31T23:59:59Z), even though RFC 9651 allows the full Integer range.
+* Dates: `datetime.datetime` (parsed values are timezone-aware, in UTC; values to be serialised must be timezone-aware too, or `ser()` raises `ValueError`)
+  * Python's `datetime` can only represent years 1 to 9999, so `parse()` raises `StructuredFieldError` for Date values outside `@-62135596800` (0001-01-01T00:00:00Z) to `@253402300799` (9999-12-31T23:59:59Z), even though RFC 9651 allows the full Integer range.
 * Display Strings: `http_sf.DisplayString` (a `UserString`)
 
 Inner Lists are represented as lists as well.
