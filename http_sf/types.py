@@ -8,6 +8,20 @@ class Token(UserString):
     def __init__(self, seq: str):  # pylint: disable=W0231
         self.data = seq
 
+    def __str__(self) -> str:
+        # Take the underlying value of a str subclass (e.g., a str Enum),
+        # ignoring any __str__ or __format__ override. Plain str skips the
+        # conversion, to keep the common case cheap; type() (not __class__)
+        # because a subclass can't override it.
+        data = self.data
+        if type(data) is str:  # pylint: disable=unidiomatic-typecheck
+            return data
+        # issubclass(type()) rather than isinstance(), so an object that only
+        # fakes a str __class__ is formatted as it always was
+        if issubclass(type(data), str):
+            return str.__str__(data)
+        return str(data)
+
     def __repr__(self) -> str:
         return f'Token("{self.data}")'
 
@@ -15,6 +29,15 @@ class Token(UserString):
 class DisplayString(UserString):
     def __init__(self, seq: str):  # pylint: disable=W0231
         self.data = seq
+
+    def __str__(self) -> str:
+        # As Token.__str__: the underlying value of a str subclass
+        data = self.data
+        if type(data) is str:  # pylint: disable=unidiomatic-typecheck
+            return data
+        if issubclass(type(data), str):
+            return str.__str__(data)
+        return str(data)
 
     def __repr__(self) -> str:
         return f'DisplayString("{self.data}")'
