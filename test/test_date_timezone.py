@@ -53,9 +53,7 @@ class TestDateRange(unittest.TestCase):
 
     def test_max_date(self):
         value = parse(b"@253402300799", tltype="item")[0]
-        self.assertEqual(
-            value, datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
-        )
+        self.assertEqual(value, datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc))
         self.assertEqual(ser(value), "@253402300799")
 
     def test_min_date(self):

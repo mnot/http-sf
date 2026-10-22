@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from string import ascii_lowercase, ascii_uppercase, digits
-from typing import Any
+from typing import Any, Union
 
 from .errors import StructuredFieldError
 from .state import ParserState
@@ -15,13 +15,14 @@ HTTP_OWS = set(b" \t")
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
-def datetime_from_timestamp(value: float) -> datetime:
+def datetime_from_timestamp(value: Union[int, float]) -> datetime:
     """
     Convert seconds since the Unix epoch to an aware UTC datetime.
 
     Unlike datetime.fromtimestamp, this doesn't go through the C library, so
     it behaves the same on every platform (including for negative values).
-    Raises OverflowError or ValueError outside the range of datetime.
+    Raises OverflowError outside the range of datetime (and for infinity), and
+    ValueError for NaN. Other types (e.g., Decimal) raise TypeError.
     """
     return EPOCH + timedelta(seconds=value)
 

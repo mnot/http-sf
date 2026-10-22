@@ -15,7 +15,7 @@ def parse_date(state: ParserState) -> datetime:
         )
     try:
         return datetime_from_timestamp(value)
-    except (ValueError, OverflowError) as why:
+    except OverflowError as why:
         raise StructuredFieldError(
             "Date value out of range", position=state.cursor, offending_char=None
         ) from why
