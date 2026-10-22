@@ -1,6 +1,6 @@
 from decimal import Decimal
 from string import digits
-from typing import Union, cast
+from typing import Union
 
 from .errors import StructuredFieldError
 from .state import ParserState
@@ -14,8 +14,8 @@ PERIOD = ord(b".")
 MINUS = ord(b"-")
 
 
-def parse_integer(state: ParserState) -> int:
-    return cast(int, parse_number(state))
+def parse_integer(state: ParserState) -> Union[int, Decimal]:
+    return parse_number(state)
 
 
 def ser_integer(inval: int) -> str:
