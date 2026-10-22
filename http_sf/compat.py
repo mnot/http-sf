@@ -18,7 +18,7 @@ from typing import (
     Union,
 )
 
-from typing_extensions import SupportsIndex
+from typing_extensions import Buffer, SupportsIndex
 
 from . import parse as _parse, ser as _ser
 from .innerlist import ser_innerlist
@@ -59,7 +59,7 @@ class Item:
         self.value: Optional[BareItemType] = value
         self.params: Parameters = Parameters()
 
-    def parse(self, data: Union[bytes, bytearray, memoryview]) -> None:
+    def parse(self, data: Buffer) -> None:
         result = _parse(data, tltype="item")
         assert isinstance(result, tuple)
         value, params = result
@@ -153,7 +153,7 @@ class Dictionary(UserDict):  # type: ignore[type-arg]
             for key, val in data.items():
                 self[key] = val
 
-    def parse(self, data: Union[bytes, bytearray, memoryview]) -> None:
+    def parse(self, data: Buffer) -> None:
         parsed: _Dict[str, Any] = _parse(data, tltype="dictionary")  # type: ignore[assignment]
         self.data.clear()
         for key, val in parsed.items():
@@ -172,7 +172,7 @@ class List(UserList):  # type: ignore[type-arg]
     def __init__(self, values: Optional[Iterable[AllItemType]] = None) -> None:
         UserList.__init__(self, [_itemise(v) for v in values or []])
 
-    def parse(self, data: Union[bytes, bytearray, memoryview]) -> None:
+    def parse(self, data: Buffer) -> None:
         parsed: _List[Any] = _parse(data, tltype="list")  # type: ignore[assignment]
         self.data.clear()
         for elem in parsed:

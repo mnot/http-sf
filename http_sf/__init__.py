@@ -27,7 +27,9 @@ THE SOFTWARE.
 
 __version__ = "1.4.0"
 
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple
+
+from typing_extensions import Buffer
 
 from http_sf.dictionary import parse_dictionary, ser_dictionary
 from http_sf.errors import StructuredFieldError
@@ -65,25 +67,28 @@ __all__ = [
 
 
 def parse(
-    value: Union[bytes, bytearray, memoryview],
+    value: Buffer,
     name: Optional[str] = None,
     tltype: Optional[str] = None,
     on_duplicate_key: Optional[OnDuplicateKeyType] = None,
 ) -> StructuredType:
-    if isinstance(value, (bytearray, memoryview)):
-        value = bytes(value)
-    elif not isinstance(value, bytes):
-        message = (
-            f"parse() requires bytes, bytearray or memoryview, not "
-            f"{type(value).__name__}"
-        )
-        if isinstance(value, str):
-            message += "; use .encode() to convert a str first"
-        raise TypeError(message)
+    data: bytes
+    if isinstance(value, bytes):
+        data = value
+    else:
+        try:
+            data = bytes(memoryview(value))
+        except TypeError:
+            message = (
+                f"parse() requires a bytes-like object, not {type(value).__name__}"
+            )
+            if isinstance(value, str):
+                message += "; use .encode() to convert a str first"
+            raise TypeError(message) from None
     structure: StructuredType
     if name is not None:
         tltype = retrofit.get(name.lower(), tltype)
-    state = ParserState(value)
+    state = ParserState(data)
     discard_ows(state)
     try:
         if tltype in ["dict", "dictionary"]:

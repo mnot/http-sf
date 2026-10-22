@@ -1,5 +1,7 @@
-"""parse() accepts bytes, bytearray and memoryview; anything else is a TypeError."""
+"""parse() accepts any bytes-like object; anything else is a TypeError."""
 
+import array
+import mmap
 import unittest
 
 from http_sf import StructuredFieldError, parse
@@ -12,11 +14,21 @@ CASES = [
 ]
 
 
+def _mmap(raw: bytes) -> mmap.mmap:
+    m = mmap.mmap(-1, len(raw))
+    m.write(raw)
+    return m
+
+
+def _array(raw: bytes) -> "array.array[int]":
+    return array.array("B", raw)
+
+
 class TestInputType(unittest.TestCase):
     def test_accepted_types(self):
         for tltype, raw in CASES:
             expected = parse(raw, tltype=tltype)
-            for wrap in (bytes, bytearray, memoryview):
+            for wrap in (bytes, bytearray, memoryview, _mmap, _array):
                 with self.subTest(tltype=tltype, raw=raw, wrap=wrap.__name__):
                     self.assertEqual(parse(wrap(raw), tltype=tltype), expected)
 
