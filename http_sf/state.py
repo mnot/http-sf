@@ -1,3 +1,5 @@
+from typing import NoReturn, Optional
+
 from http_sf.errors import StructuredFieldError
 
 
@@ -6,21 +8,27 @@ class ParserState:
         self.data = data
         self.cursor = 0
 
-    def has_data(self) -> bool:
-        return self.cursor < len(self.data)
+    def fail(
+        self,
+        message: str,
+        position: Optional[int] = None,
+        *,
+        cause: Optional[BaseException] = None,
+    ) -> NoReturn:
+        """
+        Fail parsing, as the RFC's "fail parsing" does.
 
-    def peek(self) -> bytes:
-        if not self.has_data():
-            raise StructuredFieldError(
-                "End of input", position=self.cursor, offending_char=None
-            )
-        return self.data[self.cursor : self.cursor + 1]
-
-    def consume_char(self) -> bytes:
-        if not self.has_data():
-            raise StructuredFieldError(
-                "End of input", position=self.cursor, offending_char=None
-            )
-        char = self.data[self.cursor : self.cursor + 1]
-        self.cursor += 1
-        return char
+        The error is reported at position (default: the cursor), with the byte
+        there as offending_char; it's None when position is at or past the end.
+        cause is chained as the error's __cause__ (raise ... from cause).
+        """
+        if position is None:
+            position = self.cursor
+        error = StructuredFieldError(
+            message,
+            position=position,
+            offending_char=self.data[position] if position < len(self.data) else None,
+        )
+        if cause is None:
+            raise error
+        raise error from cause

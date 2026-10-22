@@ -1,6 +1,5 @@
 from typing import Optional
 
-from .errors import StructuredFieldError
 from .innerlist import parse_item_or_inner_list, ser_item_or_inner_list
 from .state import ParserState
 from .types import ListType, OnDuplicateKeyType
@@ -21,19 +20,11 @@ def parse_list(
         if state.cursor == data_len:
             return _list
         if state.data[state.cursor] != COMMA:
-            raise StructuredFieldError(
-                "Trailing text after item in list",
-                position=state.cursor,
-                offending_char=state.data[state.cursor],
-            )
+            state.fail("Trailing text after item in list")
         state.cursor += 1
         discard_http_ows(state)
         if state.cursor == data_len:
-            raise StructuredFieldError(
-                "Trailing comma at end of list",
-                position=state.cursor,
-                offending_char=None,
-            )
+            state.fail("Trailing comma at end of list")
     return _list
 
 

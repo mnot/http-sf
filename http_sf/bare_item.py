@@ -12,7 +12,6 @@ from http_sf.string import DQUOTE, parse_string, ser_string
 from http_sf.token import TOKEN_START_CHARS, parse_token, ser_token
 from http_sf.types import BareItemType, DisplayString, Token
 
-from .errors import StructuredFieldError
 from .state import ParserState
 
 _parse_map: Dict[int, Callable[[ParserState], BareItemType]] = {
@@ -29,29 +28,17 @@ for c in NUMBER_START_CHARS:
 
 
 def parse_bare_item(state: ParserState) -> BareItemType:
-    if not state.has_data():
-        raise StructuredFieldError(
-            "Empty item", position=state.cursor, offending_char=None
-        )
+    if state.cursor >= len(state.data):
+        state.fail("Empty item")
     next_char = state.data[state.cursor]
     parser = _parse_map.get(next_char)
     if parser is None:
         if next_char == ord(b"'"):
-            raise StructuredFieldError(
-                "Strings must be double-quoted",
-                position=state.cursor,
-                offending_char=next_char,
-            )
+            state.fail("Strings must be double-quoted")
         if next_char == ord(b"("):
-            raise StructuredFieldError(
-                "Inner Lists are not valid here",
-                position=state.cursor,
-                offending_char=next_char,
-            )
-        raise StructuredFieldError(
-            f"There is no Structured Field item starting with {chr(next_char)!r}",
-            position=state.cursor,
-            offending_char=next_char,
+            state.fail("Inner Lists are not valid here")
+        state.fail(
+            f"There is no Structured Field item starting with {chr(next_char)!r}"
         )
     return parser(state)
 

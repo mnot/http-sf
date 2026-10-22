@@ -34,7 +34,7 @@ Note that if you use `name`, a `KeyError` will be raised if the type associated 
 When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is raised. Its string form includes the position and context when they are known, and it has attributes that can be used to debug the error:
 
 * `position`: The character offset in the input bytes where the error was detected.
-* `offending_char`: The character at the position where the error was detected.
+* `offending_char`: The byte (as an `int`) at `position`, or `None` if `position` is at the end of the input.
 * `context`: If the error occurred within a Dictionary or Parameter value, the key name.
 
 ~~~ python

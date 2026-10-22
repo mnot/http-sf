@@ -1,6 +1,5 @@
 from typing import List, Optional, Union, cast
 
-from .errors import StructuredFieldError
 from .item import parse_item, ser_item
 from .parameters import parse_params, ser_params
 from .state import ParserState
@@ -29,11 +28,7 @@ def parse_innerlist(
         try:
             next_char = state.data[state.cursor]
         except IndexError as why:
-            raise StructuredFieldError(
-                "End of inner list not found",
-                position=state.cursor,
-                offending_char=None,
-            ) from why
+            state.fail("End of inner list not found", cause=why)
         if next_char == PAREN_CLOSE:
             state.cursor += 1
             params = parse_params(state, on_duplicate_key)
@@ -42,17 +37,9 @@ def parse_innerlist(
         inner_list.append(item)
         try:
             if state.data[state.cursor] not in INNERLIST_DELIMS:
-                raise StructuredFieldError(
-                    "Inner list bad delimitation",
-                    position=state.cursor,
-                    offending_char=state.data[state.cursor],
-                )
+                state.fail("Inner list bad delimitation")
         except IndexError as why:
-            raise StructuredFieldError(
-                "End of inner list not found",
-                position=state.cursor,
-                offending_char=None,
-            ) from why
+            state.fail("End of inner list not found", cause=why)
 
 
 def ser_innerlist(inner_list: InnerListType) -> str:
