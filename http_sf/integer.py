@@ -2,7 +2,6 @@ from decimal import Decimal
 from string import digits
 from typing import Union
 
-from .errors import StructuredFieldError
 from .state import ParserState
 
 MAX_INT = 999999999999999
@@ -37,15 +36,9 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
         state.cursor += 1
         sign = -1
     if not state.has_data():  # 5.
-        raise StructuredFieldError(
-            "Number input lacked a number", position=state.cursor, offending_char=None
-        )
+        state.fail("Number input lacked a number")
     if state.data[state.cursor] not in DIGITS:  # 6.
-        raise StructuredFieldError(
-            "Number doesn't start with a DIGIT",
-            position=state.cursor,
-            offending_char=state.data[state.cursor],
-        )
+        state.fail("Number doesn't start with a DIGIT")
     number_start = state.cursor
     decimal_index = 0
     while state.has_data():  # 7.
@@ -55,9 +48,7 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
             pass
         elif not is_decimal and char == PERIOD:  # 7.3.
             if state.cursor - number_start - 1 > 12:  # 7.3.1. before appending "."
-                raise StructuredFieldError(
-                    "Decimal too long.", position=state.cursor - 1, offending_char=None
-                )
+                state.fail("Decimal too long.", state.cursor - 1)
             is_decimal = True  # 7.3.2.
             decimal_index = state.cursor
         else:  # 7.4. prepend char to input_string
@@ -65,27 +56,17 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
             break
         input_length = state.cursor - number_start
         if not is_decimal and input_length > 15:  # 7.5.
-            raise StructuredFieldError(
-                "Integer too long.", position=state.cursor - 1, offending_char=None
-            )
+            state.fail("Integer too long.", state.cursor - 1)
         if is_decimal and input_length > 16:  # 7.6.
-            raise StructuredFieldError(
-                "Decimal too long.", position=state.cursor - 1, offending_char=None
-            )
+            state.fail("Decimal too long.", state.cursor - 1)
     output_number: Union[int, Decimal]
     if not is_decimal:  # 8.
         output_number = int(state.data[number_start : state.cursor])  # 8.1.
     else:  # 9.
         if state.data[state.cursor - 1] == PERIOD:  # 9.1.
-            raise StructuredFieldError(
-                "Decimal ends in '.'", position=state.cursor - 1, offending_char=None
-            )
+            state.fail("Decimal ends in '.'", state.cursor - 1)
         if state.cursor - decimal_index > 3:  # 9.2.
-            raise StructuredFieldError(
-                "Decimal fractional component too long",
-                position=state.cursor - 1,
-                offending_char=None,
-            )
+            state.fail("Decimal fractional component too long", state.cursor - 1)
         output_number = Decimal(  # 9.3.
             state.data[number_start : state.cursor].decode("ascii")
         )

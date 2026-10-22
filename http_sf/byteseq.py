@@ -2,7 +2,6 @@ import base64
 import binascii
 from string import ascii_letters, digits
 
-from .errors import StructuredFieldError
 from .state import ParserState
 
 BYTE_DELIMIT = ord(b":")
@@ -14,19 +13,13 @@ def parse_byteseq(state: ParserState) -> bytes:
     try:
         end_delimit = state.data.index(BYTE_DELIMIT, state.cursor) - state.cursor
     except ValueError as why:
-        raise StructuredFieldError(
-            "Binary Sequence didn't contain ending ':'",
-            position=len(state.data),
-            offending_char=None,
-        ) from why
+        state.fail(
+            "Binary Sequence didn't contain ending ':'", len(state.data), cause=why
+        )
     b64_content = state.data[state.cursor : state.cursor + end_delimit]
     state.cursor += end_delimit + 1
     if not all(c in B64CONTENT for c in b64_content):
-        raise StructuredFieldError(
-            "Binary Sequence contained disallowed character",
-            position=state.cursor - 1,
-            offending_char=None,
-        )
+        state.fail("Binary Sequence contained disallowed character", state.cursor - 1)
     # RFC 9651 section 4.2.7: parsers SHOULD NOT fail on missing padding, so
     # normalise it rather than requiring exactly what an encoder would emit.
     # Padding is still only valid at the end, at most two characters long, and
@@ -34,20 +27,12 @@ def parse_byteseq(state: ParserState) -> bytes:
     unpadded = b64_content.rstrip(b"=")
     pad_len = len(b64_content) - len(unpadded)
     if pad_len > 2 or (pad_len and not unpadded):
-        raise StructuredFieldError(
-            "Binary Sequence failed to decode",
-            position=state.cursor - 1,
-            offending_char=None,
-        )
+        state.fail("Binary Sequence failed to decode", state.cursor - 1)
     padded = unpadded + b"=" * (-len(unpadded) % 4)
     try:
         binary_content = base64.b64decode(padded, validate=True)
     except binascii.Error as why:
-        raise StructuredFieldError(
-            "Binary Sequence failed to decode",
-            position=state.cursor - 1,
-            offending_char=None,
-        ) from why
+        state.fail("Binary Sequence failed to decode", state.cursor - 1, cause=why)
     return binary_content
 
 

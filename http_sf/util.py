@@ -6,7 +6,6 @@ from decimal import Decimal
 from string import ascii_lowercase, ascii_uppercase, digits
 from typing import Any, Union
 
-from .errors import StructuredFieldError
 from .state import ParserState
 from .types import DisplayString, JsonDict, StructuredType, Token
 
@@ -51,26 +50,10 @@ def parse_key(state: ParserState) -> str:
             COMPAT and state.data[state.cursor] in UPPER_CHARS
         ):
             if re.match(b"^[ \t;,]*$", state.data[state.cursor :]):
-                raise StructuredFieldError(
-                    "Trailing delimiter",
-                    position=state.cursor,
-                    offending_char=(
-                        state.data[state.cursor] if state.has_data() else None
-                    ),
-                )
+                state.fail("Trailing delimiter")
             if state.has_data() and state.data[state.cursor] in UPPER_CHARS:
-                raise StructuredFieldError(
-                    "Key cannot begin with an uppercase character",
-                    position=state.cursor,
-                    offending_char=(
-                        state.data[state.cursor] if state.has_data() else None
-                    ),
-                )
-            raise StructuredFieldError(
-                "Key does not begin with lcalpha or *",
-                position=state.cursor,
-                offending_char=state.data[state.cursor] if state.has_data() else None,
-            )
+                state.fail("Key cannot begin with an uppercase character")
+            state.fail("Key does not begin with lcalpha or *")
     start_cursor = state.cursor
     state.cursor += 1
     while state.has_data():

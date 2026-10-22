@@ -38,7 +38,7 @@ class TestIntegerLength(unittest.TestCase):
                 self.assertEqual(why.args[0], "Integer too long.")
                 # The 16th character, after the sign if any.
                 self.assertEqual(why.position, 15 + value.startswith(b"-"))
-                self.assertIsNone(why.offending_char)
+                self.assertEqual(why.offending_char, value[why.position])
 
     def test_sixteen_fail_in_context(self):
         # (value, header type, index of the 16th digit)
@@ -90,7 +90,7 @@ class TestDecimalLength(unittest.TestCase):
                 why = failure(value)
                 self.assertEqual(why.args[0], "Decimal too long.")
                 self.assertEqual(why.position, value.index(b"."))
-                self.assertIsNone(why.offending_char)
+                self.assertEqual(why.offending_char, value[why.position])
 
     def test_sixteen_digits_then_period(self):
         # Step 7.5 fires on the 16th digit, before the "." is reached.
@@ -105,7 +105,7 @@ class TestDecimalLength(unittest.TestCase):
                 why = failure(value)
                 self.assertEqual(why.args[0], "Decimal too long.")
                 self.assertEqual(why.position, 16 + value.startswith(b"-"))
-                self.assertIsNone(why.offending_char)
+                self.assertEqual(why.offending_char, value[why.position])
 
     def test_fraction_too_long(self):
         # Step 9.2, reached when the total is within 16 characters.

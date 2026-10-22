@@ -44,24 +44,14 @@ def parse_dictionary(
         if state.data[state.cursor] != COMMA:
             if not is_equals:
                 offending_char = state.data[state.cursor]
-                raise StructuredFieldError(
-                    f"'{this_key}' should be followed by '=', not {chr(offending_char)!r}",
-                    position=state.cursor,
-                    offending_char=offending_char,
+                state.fail(
+                    f"'{this_key}' should be followed by '=', not {chr(offending_char)!r}"
                 )
-            raise StructuredFieldError(
-                f"'{this_key}' has trailing characters after the value",
-                position=state.cursor,
-                offending_char=state.data[state.cursor],
-            )
+            state.fail(f"'{this_key}' has trailing characters after the value")
         state.cursor += 1
         discard_http_ows(state)
         if state.cursor == data_len:
-            raise StructuredFieldError(
-                "Dictionary has trailing comma",
-                position=state.cursor,
-                offending_char=None,
-            )
+            state.fail("Dictionary has trailing comma")
 
 
 def ser_dictionary(dictionary: DictionaryType) -> str:
