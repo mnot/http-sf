@@ -82,6 +82,10 @@ def parse_key(state: ParserState) -> str:
 
 
 def ser_key(key: str) -> str:
+    if isinstance(key, str):
+        # Use the underlying value, ignoring any __str__, __format__ or
+        # iteration overrides (e.g., on a str Enum), and return an exact str.
+        key = str.__str__(key)
     if len(key) == 0:
         raise ValueError("Zero length key")
     if not all(ord(char) in KEY_CHARS for char in key):
