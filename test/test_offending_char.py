@@ -106,9 +106,9 @@ class TestOffendingChar(unittest.TestCase):
                 self.assertIsNone(why.__context__)
 
     def test_byteseq(self):
-        # An alphabet error is reported at the first byte outside it. The
-        # others (padding, decoding, a missing ":") are about the value as a
-        # whole, and stay where they were.
+        # An alphabet error is reported at the first byte outside it, and a
+        # padding error at the first byte the padding rules reject. A bad
+        # length and a missing ":" are about the value as a whole.
         self.check(
             [
                 (
@@ -123,8 +123,8 @@ class TestOffendingChar(unittest.TestCase):
                     "Binary Sequence contained disallowed character",
                     8,
                 ),
-                (b":=:", "item", "Binary Sequence failed to decode", 2),
-                (b":aGVsbG8===:", "item", "Binary Sequence failed to decode", 11),
+                (b":=:", "item", "Binary Sequence failed to decode", 1),
+                (b":aGVsbG8===:", "item", "Binary Sequence failed to decode", 10),
                 (b":a:", "item", "Binary Sequence failed to decode", 2),
                 (b":aGVsbG8=", "item", "Binary Sequence didn't contain ending ':'", 9),
             ]
@@ -162,16 +162,20 @@ class TestOffendingChar(unittest.TestCase):
             with self.subTest(allowed=char):
                 parse(b":AA" + bytes([char]) + b"A:", tltype="item")
 
-    def test_byteseq_padding_errors_not_moved(self):
+    def test_byteseq_padding_errors(self):
+        # The third "=", the first byte after an "=", and a "=" with no data
+        # before it. A bad length has no such byte; it stays at the closing ":".
         message = "Binary Sequence failed to decode"
         self.check(
             [
-                (b":aGVsbG8===:", "item", message, 11),
-                (b":aGVs=bG8=:", "item", message, 10),
-                (b":a=GVsbG8=:", "item", message, 10),
-                (b":=aGVsbG8=:", "item", message, 10),
-                (b":AAAA====:", "item", message, 9),
-                (b":=:", "item", message, 2),
+                (b":aGVsbG8===:", "item", message, 10),
+                (b":aGVs=bG8=:", "item", message, 6),
+                (b":a=GVsbG8=:", "item", message, 3),
+                (b":=aGVsbG8=:", "item", message, 1),
+                (b":AAAA====:", "item", message, 7),
+                (b":=:", "item", message, 1),
+                (b":a:", "item", message, 2),
+                (b":aGVsb:", "item", message, 6),
             ]
         )
 
