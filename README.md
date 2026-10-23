@@ -33,7 +33,7 @@ Note that if you use `name`, a `KeyError` will be raised if the type associated 
 
 When parsing fails, a `StructuredFieldError` (a subclass of `ValueError`) is raised. Its string form includes the position and context when they are known, and it has attributes that can be used to debug the error:
 
-* `position`: The character offset in the input bytes where the error was detected. In most cases this is the first byte the parser rejected (for example, the `.` in the Date `@1.5`), or the end of the input if it ended too soon. An error that can only be found once a whole value has been read (for example, a Date that is out of range) is reported at the end of that value.
+* `position`: The character offset in the input bytes where the error was detected. In most cases this is the first byte the parser rejected (for example, the `.` in the Date `@1.5`, or the fourth digit after the `.` in the Decimal `1.23456`, even though the specification only checks the length of a fraction after reading the whole number), or the end of the input if it ended too soon. An error that can only be found once a whole value has been read, and can't be pinned to one byte (for example, a Date that is out of range), is reported at the end of that value.
 * `offending_char`: The byte (as an `int`) at `position`, or `None` if `position` is at the end of the input.
 * `context`: If the error occurred within a Dictionary or Parameter value, the key name.
 

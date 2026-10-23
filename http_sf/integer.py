@@ -67,7 +67,9 @@ def parse_number(state: ParserState) -> Union[int, Decimal]:
         if state.data[state.cursor - 1] == PERIOD:  # 9.1.
             state.fail("Decimal ends in '.'", state.cursor - 1)
         if state.cursor - decimal_index > 3:  # 9.2.
-            state.fail("Decimal fractional component too long", state.cursor - 1)
+            # Report the first digit past the three allowed, not the last:
+            # decimal_index is just past the ".", so + 3 is the 4th fraction digit.
+            state.fail("Decimal fractional component too long", decimal_index + 3)
         output_number = Decimal(  # 9.3.
             state.data[number_start : state.cursor].decode("ascii")
         )
