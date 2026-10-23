@@ -1,9 +1,12 @@
-"""Errors that report the fault itself: Non-integer Date and Invalid UTF-8."""
+"""Errors that report the fault itself: Non-integer Date, Invalid UTF-8 and
+Binary Sequence padding."""
 
+import binascii
 import itertools
 import unittest
 
 from http_sf import StructuredFieldError, parse
+from http_sf.byteseq import parse_byteseq
 from http_sf.date import parse_date
 from http_sf.display_string import parse_display_string
 from http_sf.state import ParserState
@@ -447,6 +450,202 @@ class TestInvalidUTF8(PositionTestCase):
                 (b'%"%ff\xc3\xa9"', "item", "String contains disallowed character", 5),
             ]
         )
+
+
+class TestBinarySequencePadding(PositionTestCase):
+    """
+    "Binary Sequence failed to decode" is reported at the first byte the
+    padding rules reject: padding is one or two "=" at the end, after at least
+    one data character. A bad length (one data character too many for whole
+    groups) isn't a fault in any byte; it stays at the closing ":".
+    """
+
+    MESSAGE = "Binary Sequence failed to decode"
+
+    # (content, offset in the content of the first rejected byte). The offsets
+    # are counted by hand, not computed from the input.
+    THIRD_EQUALS = [
+        (b"AA===", 4),
+        (b"AAA===", 5),
+        (b"AAAA====", 6),
+        (b"aGVsbG8===", 9),
+        (b"AA======", 4),
+        (b"A===", 3),  # a bad length too, but the third "=" comes first
+        (b"AA===A", 4),  # ... and it comes before the data character
+    ]
+    ONLY_EQUALS = [(b"=", 0), (b"==", 0), (b"===", 0), (b"====", 0)]
+    DATA_AFTER_EQUALS = [
+        (b"AA=A", 3),
+        (b"AA=A===", 3),  # the data character comes before the third "="
+        (b"AA==A", 4),
+        (b"AA=A=", 3),
+        (b"AA=A==", 3),
+        (b"AA=AA==", 3),
+        (b"AAA=AAAA", 4),
+        (b"aG=Vs", 3),
+        (b"aGVs=bG8=", 5),
+        (b"a=GVsbG8=", 2),
+        (b"A=A", 2),
+        (b"A=AAA", 2),
+    ]
+    LEADING_EQUALS = [
+        (b"=aGVs", 0),
+        (b"==aGVs", 0),
+        (b"=aGVsbG8=", 0),
+        (b"=A=", 0),
+    ]
+    BAD_LENGTH = [  # the end of the content, where the closing ":" is
+        (b"a", 1),
+        (b"aGVsb", 5),
+        (b"aGVsbG8aa", 9),
+        (b"AAAAAAAAA", 9),
+        (b"a=", 2),
+        (b"a==", 3),
+        (b"AAAAA=", 6),
+        (b"AAAAA==", 7),
+    ]
+    CONTEXTS = [  # (before, after, tltype)
+        (b"", b"", "item"),
+        (b"a, ", b"", "list"),
+        (b"a, ", b", b", "list"),
+        (b"(a ", b" b)", "list"),
+        (b"a=1, b=", b", c", "dictionary"),
+        (b"a=", b"", "dictionary"),
+        (b"a=1;p=", b"", "dictionary"),
+        (b"x;p=", b";q=1", "item"),
+    ]
+
+    def check_content(self, cases, is_equals):
+        for content, offset in cases:
+            self.assertEqual(content[offset] == ord("="), is_equals)
+            for before, after, tltype in self.CONTEXTS:
+                value = before + b":" + content + b":" + after
+                with self.subTest(content=content, before=before, after=after):
+                    why = failure(value, tltype)
+                    position = len(before) + 1 + offset
+                    self.assertEqual(why.args[0], self.MESSAGE)
+                    self.assertEqual(why.position, position)
+                    self.assertEqual(why.offending_char, value[position])
+
+    def test_third_equals(self):
+        self.check_content(self.THIRD_EQUALS, True)
+
+    def test_only_equals(self):
+        self.check_content(self.ONLY_EQUALS, True)
+
+    def test_data_after_equals(self):
+        self.check_content(self.DATA_AFTER_EQUALS, False)
+
+    def test_leading_equals(self):
+        self.check_content(self.LEADING_EQUALS, True)
+
+    def test_bad_length_stays_at_the_closing_colon(self):
+        for content, offset in self.BAD_LENGTH:
+            self.assertEqual(offset, len(content))
+        for content, offset in self.BAD_LENGTH:
+            for before, after, tltype in self.CONTEXTS:
+                value = before + b":" + content + b":" + after
+                with self.subTest(content=content, before=before, after=after):
+                    why = failure(value, tltype)
+                    position = len(before) + 1 + offset
+                    self.assertEqual(why.args[0], self.MESSAGE)
+                    self.assertEqual(why.position, position)
+                    self.assertEqual(why.offending_char, ord(":"))
+
+    def test_alphabet_error_comes_first(self):
+        message = "Binary Sequence contained disallowed character"
+        self.check(
+            [
+                (b":AA===.:", "item", message, 6),
+                (b":=.:", "item", message, 2),
+                (b":AA=.A:", "item", message, 4),
+                (b":AA=A$:", "item", message, 5),
+            ]
+        )
+
+    def test_first_fault_wins(self):
+        self.check(
+            [
+                (b":=A=A:", "item", self.MESSAGE, 1),
+                (b":A=A=A:", "item", self.MESSAGE, 3),
+                (b":AA==A==:", "item", self.MESSAGE, 5),
+                (b":A==A=:", "item", self.MESSAGE, 4),
+                (b":AA===A=A:", "item", self.MESSAGE, 5),
+            ]
+        )
+
+    def test_cause(self):
+        # What the position moved from is unchanged: padding that is wrong
+        # before decoding has no cause; the rest is a binascii.Error.
+        for content in (b"AA===", b"AAAA====", b"=", b"==", b"AA=A===", b"A==="):
+            with self.subTest(content=content):
+                why = failure(b":" + content + b":", "item")
+                self.assertIsNone(why.__cause__)
+                self.assertFalse(why.__suppress_context__)
+        for content in (b"AA===A", b"AA=A", b"=aGVs", b"a", b"aGVsb", b"=A=", b"a="):
+            with self.subTest(content=content):
+                why = failure(b":" + content + b":", "item")
+                self.assertIsInstance(why.__cause__, binascii.Error)
+                self.assertTrue(why.__suppress_context__)
+
+    def test_context_is_kept(self):
+        self.assertEqual(failure(b"a=1, b=:AA=A:", "dictionary").context, "b")
+        self.assertEqual(failure(b"a;b=:AA===:", "item").context, "b")
+
+    def test_direct_call(self):
+        state = ParserState(b"xx:AA=A:, y")
+        state.cursor = 2
+        with self.assertRaises(StructuredFieldError) as ctx:
+            parse_byteseq(state)
+        self.assertEqual(ctx.exception.position, 6)
+        self.assertEqual(ctx.exception.offending_char, ord("A"))
+        self.assertEqual(state.cursor, 8)  # after the closing ":"
+
+    def test_every_short_content(self):
+        # Every content of 0 to 8 characters from a small alphabet, against a
+        # left-to-right check of the padding rules.
+        for length in range(9):
+            for chars in itertools.product(b"A/=", repeat=length):
+                content = bytes(chars)
+                value = b":" + content + b":"
+                offset = self.first_rejected(content)
+                with self.subTest(content=content):
+                    if offset is None:
+                        parse(value, tltype="item")
+                        continue
+                    why = failure(value, "item")
+                    self.assertEqual(why.args[0], self.MESSAGE)
+                    self.assertEqual(why.position, 1 + offset)
+
+    @staticmethod
+    def first_rejected(content):
+        """Offset of the first rejected byte, len(content) if the length is
+        wrong, None if the content is valid."""
+        data = equals = 0
+        for offset, char in enumerate(content):
+            if char == ord("="):
+                equals += 1
+                if data == 0 or equals > 2:
+                    return offset
+            elif equals:
+                return offset
+            else:
+                data += 1
+        return len(content) if data % 4 == 1 else None
+
+    def test_valid_padding_parses(self):
+        for value in (
+            b":AA==:",
+            b":AAA=:",
+            b":AAAA==:",
+            b":AAAAAA==:",
+            b":aGVsbG8=:",
+            b":aGVsbG8==:",
+            b":aGVsbG8:",
+            b"::",
+        ):
+            with self.subTest(value=value):
+                parse(value, tltype="item")
 
 
 if __name__ == "__main__":
