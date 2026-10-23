@@ -7,7 +7,7 @@ BACKSLASH = ord("\\")
 DQUOTEBACKSLASH = set([DQUOTE, BACKSLASH])
 # Characters that need no special handling (not %x00-1F, %x7F-FF, DQUOTE or
 # backslash), so a run of them can be copied at once
-ORDINARY_RE = re.compile(rb'[^\x00-\x1f\x7f-\xff"\\]+')
+STRING_RUN_RE = re.compile(rb'[^\x00-\x1f\x7f-\xff"\\]+')
 
 
 def parse_string(state: ParserState) -> str:
@@ -38,7 +38,8 @@ def parse_string(state: ParserState) -> str:
         elif not 31 < char < 127:
             state.fail("String contains disallowed character", state.cursor - 1)
         else:
-            run = ORDINARY_RE.match(state.data, state.cursor - 1)  # char, and more
+            # char, and the ordinary characters after it
+            run = STRING_RUN_RE.match(state.data, state.cursor - 1)
             assert run  # can't fail; char is ordinary
             output_string += run.group()
             state.cursor = run.end()
