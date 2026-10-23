@@ -1,4 +1,4 @@
-"""Number length limits, as RFC 9651 section 4.2.4 steps 7.3.1, 7.5 and 7.6 set them."""
+"""Number length limits, as RFC 9651 section 4.2.4 steps 7.3.1, 7.5, 7.6, 9.1 and 9.2 set them."""
 
 import unittest
 from decimal import Decimal
@@ -143,29 +143,37 @@ class TestDecimalLength(unittest.TestCase):
                 self.assertEqual(why.offending_char, value[position])
 
     def test_fraction_too_long_contexts(self):
-        # The error comes from parse_number, so every caller reports it alike.
+        # The error comes from parse_number, so every caller reports it alike;
+        # the member or parameter key it is in is given as the context.
         cases = [
-            (b"@1.23456789", "item", 6),
-            (b"@-1.2345", "item", 7),
-            (b"a;p=1.23456789", "item", 9),
-            (b"1.23456789;p=1", "item", 5),
-            (b"1.23456789, 2", "list", 5),
-            (b"1, 2.23456789", "list", 8),
-            (b"(1 2.23456789)", "list", 8),
-            (b"(1.23456789)", "list", 6),
-            (b"a=1.23456789", "dictionary", 7),
-            (b"a=1, b=2.23456789", "dictionary", 12),
-            (b"a=(1 2.23456789)", "dictionary", 10),
-            (b"a;p=1.23456789", "dictionary", 9),
-            (b"1.23456789 ", "item", 5),
-            (b"1.2345a", "item", 5),
+            (b"@1.23456789", "item", 6, None),
+            (b"@-1.2345", "item", 7, None),
+            (b"a;p=1.23456789", "item", 9, "p"),
+            (b"1.23456789;p=1", "item", 5, None),
+            (b"1.23456789, 2", "list", 5, None),
+            (b"1, 2.23456789", "list", 8, None),
+            (b"(1 2.23456789)", "list", 8, None),
+            (b"(1.23456789)", "list", 6, None),
+            (b"a=1.23456789", "dictionary", 7, "a"),
+            (b"a=1, b=2.23456789", "dictionary", 12, "b"),
+            (b"a=(1 2.23456789)", "dictionary", 10, "a"),
+            (b"a;p=1.23456789", "dictionary", 9, "p"),
+            (b"1.23456789 ", "item", 5, None),
+            (b"1.2345a", "item", 5, None),
         ]
-        for value, tltype, position in cases:
+        for value, tltype, position, context in cases:
             with self.subTest(value=value, tltype=tltype):
                 why = failure(value, tltype)
                 self.assertEqual(why.args[0], "Decimal fractional component too long")
                 self.assertEqual(why.position, position)
                 self.assertEqual(why.offending_char, value[position])
+                self.assertEqual(why.context, context)
+                expected = (
+                    f"Decimal fractional component too long at position {position}"
+                )
+                if context is not None:
+                    expected += f" (in {context!r})"
+                self.assertEqual(str(why), expected)
 
     def test_fraction_three_digits_ok(self):
         for value, expected in [
