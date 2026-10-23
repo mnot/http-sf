@@ -25,7 +25,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 from typing import Callable, Dict, List, Optional, Tuple
 
