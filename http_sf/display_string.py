@@ -1,8 +1,13 @@
+import re
+
 from .state import ParserState
 from .types import DisplayString
 
 PERCENT = ord("%")
 DQUOTE = ord('"')
+# Characters that need no special handling (not %x00-1F, %x7F-FF, DQUOTE or
+# PERCENT), so a run of them can be copied at once
+DISPLAY_STRING_RUN_RE = re.compile(rb'[^\x00-\x1f\x7f-\xff"%]+')
 
 
 def parse_display_string(state: ParserState) -> DisplayString:
@@ -35,7 +40,11 @@ def parse_display_string(state: ParserState) -> DisplayString:
                 state.fail("Invalid UTF-8", _utf8_error_position(state, why), cause=why)
             return DisplayString(output_string)
         elif 31 < char < 127:
-            output_array.append(char)
+            # char, and the ordinary characters after it
+            run = DISPLAY_STRING_RUN_RE.match(state.data, state.cursor - 1)
+            assert run  # can't fail; char is ordinary
+            output_array += run.group()
+            state.cursor = run.end()
         else:
             state.fail("String contains disallowed character", state.cursor - 1)
 

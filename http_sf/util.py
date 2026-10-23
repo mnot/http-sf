@@ -43,6 +43,10 @@ def discard_http_ows(state: ParserState) -> None:
 KEY_START_CHARS = set((ascii_lowercase + "*").encode("ascii"))
 KEY_CHARS = set((ascii_lowercase + digits + "_-*.").encode("ascii"))
 UPPER_CHARS = set((ascii_uppercase).encode("ascii"))
+KEY_RE = re.compile(b"[" + re.escape(bytes(sorted(KEY_CHARS))) + b"]*")
+KEY_COMPAT_RE = re.compile(  # KEY_CHARS, plus uppercase
+    b"[" + re.escape(bytes(sorted(KEY_CHARS | UPPER_CHARS))) + b"]*"
+)
 COMPAT = False
 
 
@@ -59,11 +63,10 @@ def parse_key(state: ParserState) -> str:
             state.fail("Key does not begin with lcalpha or *")
     start_cursor = state.cursor
     state.cursor += 1
-    while state.cursor < data_len:
-        if state.data[state.cursor] not in KEY_CHARS:
-            if not (COMPAT and state.data[state.cursor] in UPPER_CHARS):
-                return state.data[start_cursor : state.cursor].decode("ascii").lower()
-        state.cursor += 1
+    key_re = KEY_COMPAT_RE if COMPAT else KEY_RE
+    match = key_re.match(state.data, state.cursor)
+    assert match  # can't fail; the pattern accepts zero characters
+    state.cursor = match.end()
     return state.data[start_cursor : state.cursor].decode("ascii").lower()
 
 
