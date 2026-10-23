@@ -560,6 +560,15 @@ class TestBinarySequencePadding(PositionTestCase):
                 (b":=.:", "item", message, 2),
                 (b":AA=.A:", "item", message, 4),
                 (b":AA=A$:", "item", message, 5),
+                # whitespace and line feeds are outside the alphabet too
+                (b":AA=A\n:", "item", message, 5),
+                (b":AA= A:", "item", message, 4),
+                (b":AA==\n:", "item", message, 5),
+                (b":\n==:", "item", message, 1),
+                (b":=\n=:", "item", message, 2),
+                (b":AA===\r\n:", "item", message, 6),
+                (b"a, :AA=A\n:, b", "list", message, 8),
+                (b"a=1;p=:AA= A:", "dictionary", message, 10),
             ]
         )
 

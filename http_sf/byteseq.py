@@ -47,6 +47,9 @@ def parse_byteseq(state: ParserState) -> bytes:
     # normalise it rather than requiring exactly what an encoder would emit.
     # Padding is still only valid at the end, at most two characters long, and
     # after at least one data character.
+    # Failures are reported at the first byte at fault: an alphabet error at
+    # the first byte outside it, a padding error at the first byte the padding
+    # rules reject, and a bad length (no byte is at fault) at the closing ':'.
     unpadded = b64_content.rstrip(b"=")
     pad_len = len(b64_content) - len(unpadded)
     if pad_len > 2 or (pad_len and not unpadded):
